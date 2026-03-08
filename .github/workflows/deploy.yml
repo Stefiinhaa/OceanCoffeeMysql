@@ -1,0 +1,19 @@
+name: Enviar para o Servidor
+on:
+  push:
+    branches:
+      - main
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Baixar os arquivos
+      uses: actions/checkout[@]v4
+      
+    - name: Enviar via FTP
+      uses: SamKirkland/FTP-Deploy-Action[@]v4.3.4
+      with:
+        server: ${{ secrets.FTP_SERVER }}
+        username: ${{ secrets.FTP_USERNAME }}
+        password: ${{ secrets.FTP_PASSWORD }}
+        server-dir: /htdocs/
