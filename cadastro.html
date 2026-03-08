@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ocean Coffee - Cadastro</title>
+    <link rel="icon" href="IMG/Loginho2.png" type="image/png">
+    <link rel="stylesheet" href="CSS/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        /* Estilos unificados baseados na sua tela de login */
+        body { display: flex; justify-content: center; align-items: center; min-height: 100vh; background-image: url('IMG/Fundo.png'); background-size: cover; background-position: center; font-family: 'Segoe UI', sans-serif; padding: 20px 0; }
+        .card-container { background-color: rgba(255, 255, 255, 0.95); padding: 30px 40px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); width: 100%; max-width: 480px; text-align: center; backdrop-filter: blur(5px); }
+        .card-container img { max-width: 120px; margin-bottom: 20px; }
+        .card-container h1 { font-size: 2rem; font-weight: 600; margin-bottom: 25px; color: #333; }
+        .input-field { width: 100%; padding: 12px 15px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; }
+        .btn-submit { width: 100%; padding: 12px; border: none; border-radius: 8px; background: linear-gradient(to right, #0047a3, #3ac0dd); color: white; font-size: 1.1rem; font-weight: bold; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; }
+        .btn-submit:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(0, 71, 163, 0.4); }
+        .btn-submit:disabled { background: #aaa; cursor: not-allowed; transform: none; box-shadow: none; }
+        .links { margin-top: 20px; color: #555; }
+        .links a { color: #0047a3; font-weight: 600; text-decoration: none; }
+        .links a:hover { text-decoration: underline; }
+
+        /* --- NOVOS ESTILOS PARA FORÇA DA SENHA --- */
+        .password-wrapper { position: relative; display: flex; align-items: center; margin-bottom: 15px; }
+        .password-wrapper .input-field { margin-bottom: 0; padding-right: 45px; }
+        .password-wrapper .toggle-password { position: absolute; right: 1rem; cursor: pointer; color: #9ca3af; }
+        .strength-meter { height: 5px; background-color: #e9ecef; border-radius: 5px; margin-top: -10px; margin-bottom: 15px; overflow: hidden; }
+        .strength-bar { height: 100%; width: 0; background-color: #dc3545; transition: width 0.3s ease, background-color 0.3s ease; }
+        #strength-text { margin-top: -10px; margin-bottom: 10px; font-size: 0.875rem; color: #6c757d; text-align: right; height: 1.2em; transition: color 0.3s ease; }
+
+        /* Estilos para Pop-ups (integrados) */
+        .popup-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.6); z-index: 1050; display: flex; justify-content: center; align-items: center; opacity: 0; transition: opacity 0.3s ease; pointer-events: none; }
+        .popup-overlay.visible { opacity: 1; pointer-events: auto; }
+        .popup-content { background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); text-align: center; max-width: 400px; width: 90%; transform: scale(0.9); transition: transform 0.3s ease; }
+        .popup-overlay.visible .popup-content { transform: scale(1); }
+        .popup-icon { font-size: 48px; margin-bottom: 20px; }
+        .popup-icon.error { color: #dc3545; }
+        .popup-content h3 { margin-top: 0; margin-bottom: 15px; font-size: 22px; color: #333; line-height: 1.4; }
+        .popup-buttons { margin-top: 25px; display: flex; justify-content: center; gap: 15px; }
+        .popup-buttons button { padding: 10px 25px; border-radius: 6px; font-weight: bold; border: none; color: white; cursor: pointer; }
+        .popup-buttons .btn-ok { background-color: #007bff; } .popup-buttons .btn-ok:hover { background-color: #0056b3; }
+        .toast-notification { position: fixed; top: 20px; right: 20px; background-color: #28a745; color: white; padding: 15px 25px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); z-index: 2000; display: flex; align-items: center; gap: 15px; animation: slideIn 0.5s ease forwards; }
+        .toast-notification.fade-out { animation: fadeOut 0.5s ease forwards; }
+        .toast-notification i { font-size: 24px; }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; transform: translateX(100%); } }
+    </style>
+</head>
+<body>
+    <div class="card-container">
+        <img src="IMG/Loginho2.png" alt="Ocean Coffee Brasil">
+        <h1>Crie sua Conta</h1>
+        <form id="cadastroForm">
+            <input class="input-field" type="text" placeholder="Nome completo" name="nome" id="nome" required>
+            <input class="input-field" type="email" placeholder="Email" name="email" id="email" required>
+            <input class="input-field" type="tel" placeholder="Telefone" name="telefone" id="telefone" maxlength="15">
+            
+            <div class="password-wrapper">
+                <input class="input-field" type="password" placeholder="Crie sua senha" name="senha" id="senha" required>
+                <i class="fas fa-eye toggle-password"></i>
+            </div>
+            <div class="strength-meter"><div id="strength-bar" class="strength-bar"></div></div>
+            <p id="strength-text"></p>
+            
+            <button type="submit" class="btn-submit" id="submit-button" disabled>Cadastrar</button>
+        </form>
+        <div class="links">
+            <p>Já tem uma conta? <a href="Login.html">Faça o login</a></p>
+        </div>
+    </div>
+
+    <script type="module">
+        import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.44.1/+esm";
+    
+        const supabaseUrl = "https://uldxazlnnpuoxfzsovmu.supabase.co";
+        const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVsZHhhemxubnB1b3hmenNvdm11Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg3Mjg2NzgsImV4cCI6MjA2NDMwNDY3OH0.fyToys8_muc1XyUebJ19gxGEkCVM_cXg80UJR894xQY";
+        const supabase = createClient(supabaseUrl, supabaseKey);
+
+        function showPopup(message) {
+            return new Promise((resolve) => {
+                const overlay = document.createElement('div');
+                overlay.className = 'popup-overlay';
+                overlay.innerHTML = `<div class="popup-content"><i class="popup-icon fas fa-times-circle error"></i><h3>${message}</h3><div class="popup-buttons"><button class="btn-ok">OK</button></div></div>`;
+                document.body.appendChild(overlay);
+                setTimeout(() => overlay.classList.add('visible'), 10);
+                const closePopup = (value) => {
+                    overlay.classList.remove('visible');
+                    overlay.addEventListener('transitionend', () => { overlay.remove(); resolve(value); });
+                };
+                overlay.querySelector('.btn-ok')?.addEventListener('click', () => closePopup(true));
+            });
+        }
+        function showToast(message) {
+            const toast = document.createElement('div');
+            toast.className = 'toast-notification success';
+            toast.innerHTML = `<i class="fas fa-check-circle"></i><span>${message}</span>`;
+            document.body.appendChild(toast);
+            setTimeout(() => {
+                toast.classList.add('fade-out');
+                toast.addEventListener('animationend', () => toast.remove());
+            }, 3000);
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const form = document.getElementById('cadastroForm');
+            if (!form) return;
+
+            const telefoneInput = document.getElementById('telefone');
+            const senhaInput = document.getElementById('senha');
+            const submitButton = document.getElementById('submit-button');
+            const strengthBar = document.getElementById('strength-bar');
+            const strengthText = document.getElementById('strength-text');
+
+            // --- LÓGICA DA MÁSCARA DE TELEFONE ---
+            telefoneInput.addEventListener('input', (e) => {
+                let valor = e.target.value.replace(/\D/g, '');
+                valor = valor.replace(/^(\d{2})(\d)/g, '($1) $2');
+                if (valor.length > 10) {
+                    valor = valor.replace(/(\d{5})(\d)/, '$1-$2');
+                } else {
+                    valor = valor.replace(/(\d{4})(\d)/, '$1-$2');
+                }
+                e.target.value = valor;
+            });
+            
+            // --- NOVA LÓGICA PARA FORÇA DA SENHA ---
+            function checkPasswordStrength() {
+                const password = senhaInput.value;
+                let score = 0;
+                if (password.length >= 8) score++;
+                if (/[A-Z]/.test(password)) score++;
+                if (/[0-9]/.test(password)) score++;
+                if (/[^a-zA-Z0-9]/.test(password)) score++;
+
+                strengthBar.style.width = (score * 25) + '%';
+                
+                if (password.length === 0) {
+                    strengthText.textContent = '';
+                    strengthBar.style.backgroundColor = 'transparent';
+                } else if (score < 3) {
+                    strengthText.textContent = 'Senha Fraca';
+                    strengthBar.style.backgroundColor = '#dc3545';
+                } else if (score === 3) {
+                    strengthText.textContent = 'Senha Média';
+                    strengthBar.style.backgroundColor = '#ffc107';
+                } else {
+                    strengthText.textContent = 'Senha Forte';
+                    strengthBar.style.backgroundColor = '#28a745';
+                }
+                
+                // Habilita o botão apenas se a senha for forte
+                submitButton.disabled = score < 4;
+                return score;
+            }
+
+            senhaInput.addEventListener('input', checkPasswordStrength);
+
+            // --- LÓGICA PARA VER/OCULTAR SENHA ---
+            document.querySelector('.toggle-password').addEventListener('click', function () {
+                const input = this.closest('.password-wrapper').querySelector('input');
+                input.type = input.type === 'password' ? 'text' : 'password';
+                this.classList.toggle('fa-eye');
+                this.classList.toggle('fa-eye-slash');
+            });
+            
+            form.addEventListener("submit", async (e) => {
+                e.preventDefault();
+                const btn = e.target.querySelector("button");
+                btn.disabled = true;
+                btn.textContent = "Cadastrando...";
+
+                const nome = document.getElementById("nome").value.trim();
+                const email = document.getElementById("email").value.trim();
+                const telefone = document.getElementById("telefone").value.replace(/\D/g, '');
+                const senha = document.getElementById("senha").value;
+
+                try {
+                    // Validação final de segurança
+                    if (checkPasswordStrength() < 4) {
+                        throw new Error("A senha não é forte o suficiente. Siga os critérios indicados.");
+                    }
+
+                    const { data, error } = await supabase.auth.signUp({
+                        email,
+                        password: senha,
+                        options: {
+                            data: {
+                                nome: nome,
+                                telefone: telefone
+                            }
+                        }
+                    });
+
+                    if (error) throw error;
+                    
+                    showToast("Cadastro realizado com sucesso!");
+                    
+                    setTimeout(() => {
+                        window.location.replace("Login.html");
+                    }, 3500);
+
+                } catch (err) {
+                    await showPopup(err.message, 'error');
+                    btn.disabled = false;
+                    btn.textContent = "Cadastrar";
+                    checkPasswordStrength(); // Reavalia o status do botão
+                }
+            });
+        });
+    </script>
+</body>
+</html>
+

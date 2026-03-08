@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minha Conta</title>
+    <link rel="stylesheet" href="CSS/confirmacao.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <aside class="sidebar">
+            <h2>Configurações</h2>
+            <nav>
+                <ul>
+                    <li><a href="#dados-pessoais" class="active">Meus Dados</a></li>
+                    <li><a href="#preferencias">Acompanhamento</a></li>
+                    <li><a href="#seguranca">Segurança</a></li>
+                    <li><a href="#privacidade">Privacidade</a></li>
+                </ul>
+            </nav>
+            <a href="Index.html">
+            <button class="logout-btn">Sair</button>
+            </a>
+        </aside>
+
+        <main class="content">
+            <a href="Anuncie.html">
+            <h1>Bem-vindo(a) de volta! ANUNCIE</h1>
+        </a>
+            <section id="dados-pessoais" class="section-block active-section">
+                <h2>Meus Dados</h2>
+                <form>
+                    <div class="form-group">
+                        <label for="nome">Nome Completo</label>
+                        <input type="text" id="nome" name="nome" value="João Silva" placeholder="Seu nome completo">
+                    </div>
+                    <div class="form-group">
+                        <label for="email">E-mail</label>
+                        <input type="email" id="email" name="email" value="joao.silva@email.com" placeholder="Seu e-mail">
+                    </div>
+                    <div class="form-group">
+                        <label for="telefone">Telefone</label>
+                        <input type="tel" id="telefone" name="telefone" value="(11) 98765-4321" placeholder="Seu telefone">
+                    </div>
+                    <div class="form-group">
+                        <label for="endereco">Endereço de Entrega</label>
+                        <input type="text" id="endereco" name="endereco" value="Rua das Acácias, 123 - Centro" placeholder="Seu endereço completo">
+                    </div>
+                    <button type="submit" class="save-btn">Salvar Alterações</button>
+                </form>
+            </section>
+
+            <section id="preferencias" class="section-block">
+               <!-- Aqui vamos colocar o detalhamento do produto se esta na parte de solicitações
+                se foi aprovado etc e se for aprovado ele vai para a tela de aprovados e para essa
+                tela de perfil do usuario  -->
+            </section>
+
+            <section id="seguranca" class="section-block">
+                <h2>Segurança</h2>
+                <p>Mantenha sua conta segura alterando sua senha regularmente.</p>
+                <form>
+                    <div class="form-group">
+                        <label for="senha-atual">Senha Atual</label>
+                        <input type="password" id="senha-atual" name="senha-atual" placeholder="Sua senha atual">
+                    </div>
+                    <div class="form-group">
+                        <label for="nova-senha">Nova Senha</label>
+                        <input type="password" id="nova-senha" name="nova-senha" placeholder="Sua nova senha">
+                    </div>
+                    <div class="form-group">
+                        <label for="confirmar-senha">Confirmar Nova Senha</label>
+                        <input type="password" id="confirmar-senha" name="confirmar-senha" placeholder="Confirme sua nova senha">
+                    </div>
+                    <button type="submit" class="save-btn">Alterar Senha</button>
+                </form>
+            </section>
+
+            <section id="privacidade" class="section-block">
+                <h2>Privacidade</h2>
+                <p>Gerencie como seus dados são usados e controlados.</p>
+                <div class="form-group">
+                    <button class="delete-account-btn">Excluir Minha Conta</button>
+                    <small>Esta ação é irreversível.</small>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const navLinks = document.querySelectorAll('.sidebar nav ul li a');
+            const sections = document.querySelectorAll('.section-block');
+
+            navLinks.forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+
+                    // Remove active class from all links
+                    navLinks.forEach(l => l.classList.remove('active'));
+                    // Add active class to clicked link
+                    link.classList.add('active');
+
+                    // Hide all sections
+                    sections.forEach(sec => sec.classList.remove('active-section'));
+
+                    // Show the target section
+                    const targetId = link.getAttribute('href').substring(1);
+                    document.getElementById(targetId).classList.add('active-section');
+                });
+            });
+        });
+    </script>
+</body>
+</html>

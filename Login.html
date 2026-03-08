@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ocean Coffee - Login</title>
+    <link rel="icon" href="IMG/Loginho2.png" type="image/png">
+    <link rel="stylesheet" href="CSS/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        /* Seus estilos de login.html */
+        body { display: flex; justify-content: center; align-items: center; height: 100vh; background-image: url('IMG/Fundo.png'); background-size: cover; background-position: center; }
+        .login-card { background-color: rgba(255, 255, 255, 0.95); padding: 40px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); width: 100%; max-width: 450px; text-align: center; backdrop-filter: blur(5px); }
+        .login-card img { max-width: 150px; margin-bottom: 20px; }
+        .login-card h1 { font-size: 2rem; font-weight: 600; margin-bottom: 25px; color: #333; }
+        .input-field { width: 100%; padding: 12px 15px; margin-bottom: 20px; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; box-sizing: border-box; }
+        .btn-login { width: 100%; padding: 12px; border: none; border-radius: 8px; background: linear-gradient(to right, #0047a3, #3ac0dd); color: white; font-size: 1.1rem; font-weight: bold; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; }
+        .btn-login:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(0, 71, 163, 0.4); }
+        .btn-login:disabled { background: #aaa; cursor: not-allowed; transform: none; box-shadow: none; }
+        .links { margin-top: 20px; color: #555; }
+        .links a { color: #0047a3; font-weight: 600; text-decoration: none; }
+        .links a:hover { text-decoration: underline; }
+
+        /* --- ESTILOS CORRIGIDOS PARA VISUALIZAÇÃO DE SENHA --- */
+        .password-wrapper {
+            position: relative;
+            margin-bottom: 20px; /* Mantém o espaçamento do formulário */
+        }
+        .password-wrapper .input-field {
+            margin-bottom: 0; /* Remove a margem do input interno */
+            padding-right: 45px; /* Espaço para o ícone */
+        }
+        .password-wrapper .toggle-password {
+            position: absolute;
+            right: 1rem;
+            top: 50%;
+            transform: translateY(-50%); /* Centraliza verticalmente o ícone */
+            cursor: pointer;
+            color: #9ca3af;
+        }
+        
+        /* Estilos do Pop-up */
+        .popup-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.6); z-index: 1050; display: flex; justify-content: center; align-items: center; opacity: 0; transition: opacity 0.3s ease; pointer-events: none; }
+        .popup-overlay.visible { opacity: 1; pointer-events: auto; }
+        .popup-content { background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); text-align: center; max-width: 400px; width: 90%; transform: scale(0.9); transition: transform 0.3s ease; }
+        .popup-overlay.visible .popup-content { transform: scale(1); }
+        .popup-icon { font-size: 48px; margin-bottom: 20px; }
+        .popup-icon.error { color: #dc3545; }
+        .popup-content h3 { margin-top: 0; margin-bottom: 15px; font-size: 22px; color: #333; line-height: 1.4; }
+        .popup-buttons { margin-top: 25px; display: flex; justify-content: center; gap: 15px; }
+        .popup-buttons button { padding: 10px 25px; border-radius: 6px; font-weight: bold; border: none; color: white; cursor: pointer; }
+        .popup-buttons .btn-ok { background-color: #007bff; } .popup-buttons .btn-ok:hover { background-color: #0056b3; }
+    </style>
+</head>
+<body>
+    <div class="login-card">
+        <img src="IMG/Loginho2.png" alt="Ocean Coffee Brasil">
+        <h1>Bem-vindo de volta!</h1>
+        <form id="loginForm">
+            <input class="input-field" type="email" placeholder="Email" id="email" required>
+            <div class="password-wrapper">
+                <input class="input-field" type="password" placeholder="Senha" id="senha" required>
+                <i class="fas fa-eye toggle-password"></i>
+            </div>
+            <button type="submit" class="btn-login">Entrar</button>
+        </form>
+        <div class="links">
+            <p><a href="esqueci-senha.html">Esqueceu a senha?</a></p> <br>
+
+            <p>Não tem uma conta? <a href="cadastro.html">Cadastre-se</a></p>
+        </div>
+    </div>
+
+    <script type="module">
+        import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+
+        const supabaseUrl = "https://uldxazlnnpuoxfzsovmu.supabase.co";
+        const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVsZHhhemxubnB1b3hmenNvdm11Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg3Mjg2NzgsImV4cCI6MjA2NDMwNDY3OH0.fyToys8_muc1XyUebJ19gxGEkCVM_cXg80UJR894xQY";
+        const supabase = createClient(supabaseUrl, supabaseKey);
+
+        function showPopup(message, type = 'error') {
+            return new Promise((resolve) => {
+                const overlay = document.createElement('div');
+                overlay.className = 'popup-overlay';
+                overlay.innerHTML = `<div class="popup-content"><i class="popup-icon fas fa-times-circle error"></i><h3>${message}</h3><div class="popup-buttons"><button class="btn-ok">OK</button></div></div>`;
+                document.body.appendChild(overlay);
+                setTimeout(() => overlay.classList.add('visible'), 10);
+                const closePopup = (value) => {
+                    overlay.classList.remove('visible');
+                    overlay.addEventListener('transitionend', () => { overlay.remove(); resolve(value); });
+                };
+                overlay.querySelector('.btn-ok')?.addEventListener('click', () => closePopup(true));
+            });
+        }
+        
+        document.querySelector('.toggle-password').addEventListener('click', function () {
+            const passwordInput = document.getElementById('senha');
+            const icon = this;
+            
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+            
+            icon.classList.toggle('fa-eye');
+            icon.classList.toggle('fa-eye-slash');
+        });
+
+        document.getElementById("loginForm").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const btn = e.target.querySelector("button");
+            btn.disabled = true;
+            btn.textContent = "Entrando...";
+            const email = document.getElementById("email").value.trim();
+            const senha = document.getElementById("senha").value;
+
+            try {
+                const { data, error: authError } = await supabase.auth.signInWithPassword({ email, password: senha });
+                if (authError) {
+                    if (authError.message.includes("Email not confirmed")) {
+                        throw new Error("Seu email ainda não foi confirmado. Verifique sua caixa de entrada.");
+                    }
+                    throw new Error("Email ou senha inválidos.");
+                }
+                if (!data.user) { throw new Error("Falha na autenticação, usuário não retornado."); }
+                
+                const { data: profile, error: profileError } = await supabase.from("usuarios").select("tipo, nome").eq("user_id", data.user.id).single();
+                if (profileError) {
+                    console.error("DEBUG: Erro ao buscar perfil na tabela 'usuarios':", profileError);
+                    throw new Error("Não foi possível encontrar um perfil para este usuário.");
+                }
+                if (!profile) { throw new Error("Perfil de usuário não encontrado no banco de dados."); }
+
+                btn.textContent = "Sucesso!";
+                setTimeout(() => {
+                    if (profile.tipo === "Administrador") {
+                        localStorage.setItem("bemVindo", profile.nome);
+                        window.location.replace("dashboard.html");
+                    } else {
+                        window.location.replace("perfil.html");
+                    }
+                }, 500);
+
+            } catch (err) {
+                console.error("DEBUG: Erro final no bloco de login:", err);
+                await showPopup(err.message, 'error');
+                btn.disabled = false;
+                btn.textContent = "Entrar";
+            }
+        });
+    </script>
+</body>
+</html>
