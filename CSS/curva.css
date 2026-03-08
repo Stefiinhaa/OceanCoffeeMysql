@@ -1,0 +1,123 @@
+
+  .curved-section {
+    position: relative;
+    width: 100%;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  .curved-section .background {
+    width: 100%;
+    height: 100%;
+    background: url('IMG/fundoteste4.png') ;
+    background-size: cover;
+    position: absolute;
+    z-index: 0;
+  }
+
+.curved-shape {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 65%;
+    height: 120%;
+    background-color: #f5f3d8;
+    border-top-left-radius: 76% 98%;
+    border-bottom-left-radius: 25% 10%;
+    z-index: 2;
+}
+
+  .coffee-info {
+    position: relative;
+    z-index: 2;
+    padding: 11px 50px;
+    display: flex;
+    align-items: center;
+    height: 100%;
+
+    color: #3e2f1c;
+        gap: 24px;
+  }
+
+  .coffee-info .text-side {
+    max-width: 50%;
+  }
+
+.coffee-info h1.nomecafe {
+  font-size: 41px;
+  font-family: Garamond;
+  font-weight: bold;
+  color: black;
+  margin-top: 291px;
+  margin-bottom: 55px;
+  margin-left: 395px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+
+  .img{
+    width: 255px;
+    margin-left: -5%;
+    margin-top: -6px;
+    margin-bottom: 27px;
+    margin-bottom: -102px;
+    margin-top: 24px;
+
+  }
+
+  
+.info-list {
+  margin-top: 313px;
+  display: flex;
+  flex-direction: column;
+  gap: 0px;
+  margin-left: 37PX;
+}
+
+.info-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0px;
+  font-family: 'Garamond', serif;
+  font-size: 18px;
+  line-height: 1.5;
+}
+
+.icon {
+  width: 40px;
+  height: auto;
+}
+
+.Grãoinfo{
+      width: 70px;
+    margin-bottom: 187PX;
+    margin-left: 7%;
+    margin-top: -282px;
+}
+
+.info1{
+     margin-top: -273px;
+         font-size: 22px;
+
+}
+.Grãoinfo2{
+width: 70px;
+margin-top: -136px;
+    margin-left: -85px;
+}
+.info2{
+     margin-top: -113px;
+         font-size: 22px;
+
+}
+.Grãoinfo3{
+  width: 70px;
+  margin-left: -187px;
+  margin-top: 17px;
+}
+.info3{
+     margin-top: 48px;
+         font-size: 22px;
+
+}

@@ -1,0 +1,318 @@
+/* Geral */
+:root {
+    --primary-color: #6F4E37; /* Marrom Café */
+    --secondary-color: #D2B48C; /* Bege Claro */
+    --accent-color: #A0522D; /* Marrom Médio */
+    --text-color: #333;
+    --light-text-color: #666;
+    --bg-color: #F8F4F0; /* Fundo Creme */
+    --card-bg: #FFFFFF;
+    --border-color: #E0E0E0;
+    --shadow-color: rgba(0, 0, 0, 0.05);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Poppins', sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    line-height: 1.6;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start; /* Align at the top */
+    padding: 30px;
+}
+
+.container {
+    display: flex;
+    width: 100%;
+    max-width: 1200px;
+    background-color: var(--card-bg);
+    border-radius: 12px;
+    box-shadow: 0 4px 20px var(--shadow-color);
+    overflow: hidden;
+}
+
+/* Sidebar */
+.sidebar {
+    width: 280px;
+    background-color: var(--primary-color);
+    color: #fff;
+    padding: 30px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    flex-shrink: 0; /* Prevent shrinking */
+}
+
+.sidebar h2 {
+    font-size: 1.8em;
+    margin-bottom: 30px;
+    font-weight: 600;
+    text-align: center;
+}
+
+.sidebar nav ul {
+    list-style: none;
+    padding: 0;
+}
+
+.sidebar nav ul li {
+    margin-bottom: 15px;
+}
+
+.sidebar nav ul li a {
+    color: #fff;
+    text-decoration: none;
+    font-size: 1.1em;
+    padding: 12px 15px;
+    display: block;
+    border-radius: 8px;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.sidebar nav ul li a:hover,
+.sidebar nav ul li a.active {
+    background-color: var(--accent-color);
+    transform: translateX(5px);
+}
+
+.logout-btn {
+    background-color: transparent;
+    color: #fff;
+    border: 2px solid #fff;
+    padding: 12px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1em;
+    font-weight: 600;
+    transition: background-color 0.3s ease, color 0.3s ease;
+    width: 100%;
+    margin-top: 30px;
+}
+
+.logout-btn:hover {
+    background-color: #fff;
+    color: var(--primary-color);
+}
+
+/* Conteúdo Principal */
+.content {
+    flex-grow: 1;
+    padding: 30px 40px;
+}
+
+.content h1 {
+    font-size: 2.5em;
+    color: var(--primary-color);
+    margin-bottom: 25px;
+    font-weight: 600;
+}
+
+.content h2 {
+    font-size: 1.8em;
+    color: var(--accent-color);
+    margin-bottom: 25px;
+    border-bottom: 2px solid var(--border-color);
+    padding-bottom: 10px;
+}
+
+.section-block {
+    display: none; /* Hidden by default */
+    margin-bottom: 40px;
+}
+
+.section-block.active-section {
+    display: block; /* Show active section */
+}
+
+/* Formulários */
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: var(--light-text-color);
+}
+
+.form-group input[type="text"],
+.form-group input[type="email"],
+.form-group input[type="tel"],
+.form-group input[type="password"],
+.form-group select {
+    width: 100%;
+    padding: 12px 15px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 1em;
+    color: var(--text-color);
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(111, 78, 55, 0.2);
+    outline: none;
+}
+
+.checkbox-group {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.checkbox-group input[type="checkbox"] {
+    margin-right: 10px;
+    width: 20px;
+    height: 20px;
+    accent-color: var(--primary-color); /* Changes checkbox color */
+}
+
+.checkbox-group label {
+    margin-bottom: 0; /* Override default form-group label margin */
+}
+
+.save-btn {
+    background-color: var(--primary-color);
+    color: #fff;
+    border: none;
+    padding: 12px 25px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1.1em;
+    font-weight: 600;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    margin-top: 15px;
+}
+
+.save-btn:hover {
+    background-color: var(--accent-color);
+    transform: translateY(-2px);
+}
+
+.delete-account-btn {
+    background-color: #dc3545; /* Red for danger */
+    color: #fff;
+    border: none;
+    padding: 12px 25px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1.1em;
+    font-weight: 600;
+    transition: background-color 0.3s ease;
+    margin-top: 15px;
+}
+
+.delete-account-btn:hover {
+    background-color: #c82333;
+}
+
+.small {
+    font-size: 0.85em;
+    color: var(--light-text-color);
+    margin-top: 5px;
+    display: block;
+}
+
+/* Responsividade */
+@media (max-width: 900px) {
+    .container {
+        flex-direction: column;
+        margin: 0;
+        border-radius: 0;
+        box-shadow: none;
+        max-width: 100%;
+    }
+
+    body {
+        padding: 0;
+        align-items: flex-start;
+    }
+
+    .sidebar {
+        width: 100%;
+        padding: 20px;
+        flex-direction: row;
+        justify-content: space-around;
+        align-items: center;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .sidebar h2 {
+        display: none; /* Hide title on smaller screens */
+    }
+
+    .sidebar nav ul {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 10px;
+    }
+
+    .sidebar nav ul li {
+        margin-bottom: 0;
+    }
+
+    .sidebar nav ul li a {
+        padding: 8px 12px;
+        font-size: 0.9em;
+    }
+
+    .logout-btn {
+        width: auto;
+        margin-top: 0;
+        padding: 8px 15px;
+        font-size: 0.9em;
+    }
+
+    .content {
+        padding: 25px 20px;
+    }
+
+    .content h1 {
+        font-size: 2em;
+        margin-bottom: 20px;
+        text-align: center;
+    }
+
+    .content h2 {
+        font-size: 1.5em;
+        text-align: center;
+        margin-bottom: 20px;
+    }
+}
+
+@media (max-width: 600px) {
+    .sidebar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .sidebar nav ul {
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    .logout-btn {
+        width: 100%;
+        margin-top: 20px;
+    }
+
+    .content {
+        padding: 20px 15px;
+    }
+
+    .save-btn, .delete-account-btn {
+        width: 100%;
+    }
+}

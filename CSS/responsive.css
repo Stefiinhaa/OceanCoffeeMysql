@@ -1,0 +1,392 @@
+/* --- ESTILOS PARA UMA EXPERIÊNCIA MOBILE PROFISSIONAL (DENTRO DE responsive.css) --- */
+
+/* Regra global para evitar que o site arraste para o lado */
+html,
+body {
+    overflow-x: hidden;
+}
+
+/* Ocultar o menu mobile no desktop */
+.mobile-header,
+.mobile-nav,
+.nav-overlay {
+    display: none;
+}
+
+/* --- ESTILOS PARA ECRÃS MENORES (TABLETS E TELEMÓVEIS) --- */
+@media (max-width: 992px) {
+
+    /* --- Esconder a barra de navegação original --- */
+    .navbar {
+        display: none !important;
+    }
+
+    /* --- Mostrar e estilizar o novo cabeçalho mobile --- */
+    .mobile-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 1.5rem;
+        height: 60px;
+        background-color: #b23a27;
+        color: white;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        z-index: 100;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    }
+
+    .mobile-header .logo-img {
+        height: 40px;
+    }
+
+    .menu-toggle {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        /* color: white; */
+        cursor: pointer;
+    }
+
+    /* --- Estilo do painel do menu que desliza --- */
+    .mobile-nav {
+        display: flex;
+        flex-direction: column;
+        position: fixed;
+        top: 0;
+        right: -100%;
+        width: 80%;
+        max-width: 300px;
+        height: 100vh;
+        background-color: #f9f5e7;
+        z-index: 110;
+        transition: right 0.35s ease-in-out;
+        padding: 1.5rem;
+        box-shadow: -3px 0 15px rgba(0, 0, 0, 0.2);
+    }
+
+    .mobile-nav.is-open {
+        right: 0;
+    }
+
+    .mobile-nav-header {
+        padding-bottom: 1rem;
+        margin-bottom: 1rem;
+        border-bottom: 1px solid #ddd;
+        text-align: center;
+    }
+
+    .mobile-nav-links {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        list-style: none;
+        padding: 0;
+    }
+
+    .mobile-nav-links a {
+        color: #3e2f1c;
+        text-decoration: none;
+        font-size: 1.2rem;
+        font-weight: 600;
+        font-family: 'Poppins', sans-serif;
+        padding: 1rem;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        transition: background-color 0.2s ease;
+    }
+
+    .mobile-nav-links a:hover {
+        background-color: #e9e5d1;
+    }
+
+    .mobile-nav-links a i {
+        width: 20px;
+        text-align: center;
+    }
+
+    /* Fundo escurecido quando o menu está aberto */
+    .nav-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 105;
+    }
+
+    .nav-overlay.is-open {
+        display: block;
+    }
+
+     /* --- Ajuste Geral para conteúdo sob header fixo --- */
+     main, section { /* Aplica a seções principais se necessário */
+        padding-top: -5px; /* Garante espaço geral, pode precisar ajustar ou remover dependendo da estrutura */
+     }
+     #fundo {
+         padding-top: 60px; /* Especificamente para a primeira seção */
+     }
+     /* Removidas regras específicas de layout para #fundo, .Primeirasessao, .Logo, .texto1, .frase, .Pacote */
+
+
+    /* --- AJUSTES PARA A SEÇÃO 'ANUNCIE SEUS PRODUTOS' - CONFORME IMAGEM 2 --- */
+    .containers { /* O container pai de toda a seção Anuncie */
+        padding: 40px 15px; /* Adiciona padding para as bordas */
+        text-align: center; /* Centraliza o texto */
+    }
+
+    .title {
+        font-size: 28px; /* Ajusta o tamanho do título */
+        margin-bottom: 15px;
+    }
+
+    .Ocean { /* A imagem do logo Ocean Coffee dentro do título */
+        width: 180px; /* Ajusta o tamanho do logo */
+        height: auto;
+        display: block; /* Garante que o logo ocupe sua própria linha e seja centralizado */
+        margin: 0 auto;
+    }
+
+    .content-block {
+        flex-direction: column; /* Força a coluna para empilhar conteúdo */
+        align-items: center; /* Centraliza os itens na coluna */
+        gap: 30px; /* Espaçamento entre os blocos (imagens e texto) */
+        padding: 20px 0; /* Padding vertical para o bloco de conteúdo */
+    }
+
+    .image-container {
+        position: relative; /* Mantém o posicionamento original para sobreposição das imagens */
+        width: 300px; /* Reduz a largura para mobile */
+        height: 250px; /* Ajusta a altura conforme as imagens sobrepostas */
+        display: block; /* Garante que o container de imagens se comporte como um bloco */
+        margin: 0 auto 30px auto; /* Centraliza e adiciona espaço abaixo */
+        /* Removidas regras de left, bottom, top que possam causar problemas */
+    }
+
+    .trator, .cortador {
+        position: absolute; /* Mantém o posicionamento absoluto para sobreposição */
+        width: 200px; /* Ajuste o tamanho das imagens */
+        height: 200px;
+        border-radius: 50%;
+        object-fit: cover;
+        box-shadow: 0px 10px 15px rgba(0, 0, 0, 0.2);
+        transition: transform 0.3s ease;
+        margin-top: 20px;
+    }
+
+    .trator {
+        top: 0;
+        left: 0;
+        z-index: 1; /* Para garantir a ordem de sobreposição */
+    }
+
+    .cortador {
+        top: 50px; /* Ajusta a posição vertical para sobreposição */
+        right: 0;
+        z-index: 2; /* Para o cortador ficar por cima do trator */
+    }
+
+    .info {
+        width: 100%; /* Ocupa a largura total */
+        max-width: 500px; /* Limita a largura para melhor leitura */
+        margin: 0 auto; /* Centraliza o bloco de texto */
+        text-align: center; /* Centraliza o texto */
+        padding: 0 15px; /* Padding interno para o texto */
+        line-height: 1.6; /* Melhorar legibilidade */
+        font-size: 16px;
+    }
+
+    .button-container {
+        display: flex;
+        justify-content: center; /* Centraliza o botão */
+        margin-top: 30px; /* Espaço acima do botão */
+    }
+
+    .anuncie-btn {
+        padding: 10px 25px;
+        font-size: 18px;
+    }
+
+
+    /* --- RESPONSIVIDADE PARA A SEÇÃO 'Nosso Café' (.curved-section) --- */
+    /* (As regras que funcionaram antes permanecem aqui) */
+    .curved-section .background,
+    .curved-section .curved-shape {
+      display: none !important;
+    }
+    .curved-section {
+      height: auto !important;
+      padding: 60px 20px !important;
+      background-color: #f5f3d8 !important;
+      position: static !important;
+      overflow: visible !important;
+      margin-top: 0 !important;
+    }
+    .coffee-info {
+      position: static !important;
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: center !important;
+      text-align: center !important;
+      padding: 0 !important;
+      gap: 30px !important;
+      height: auto !important;
+      color: #3e2f1c !important;
+      width: 100% !important;
+      max-width: 600px;
+      margin: 0 auto !important;
+    }
+    .coffee-info .text-side {
+      max-width: 100% !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      flex: none !important;
+    }
+    .coffee-info h1.nomecafe {
+      font-size: 32px !important;
+      margin: 0 0 20px 0 !important;
+      text-align: center !important;
+      white-space: normal !important;
+      display: block !important;
+      border: none !important;
+      padding: 0 !important;
+      color: black !important;
+    }
+    .img {
+      width: 150px !important;
+      height: auto !important;
+      margin: 0 auto 20px auto !important;
+      display: block !important;
+      float: none !important;
+    }
+    .info-list {
+      margin: 0 !important;
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: center !important;
+      gap: 20px !important;
+      width: 100% !important;
+    }
+    .info-item {
+      display: flex !important;
+      flex-direction: row !important;
+      align-items: center !important;
+      gap: 15px !important;
+      font-size: 17px !important;
+      text-align: left !important;
+      max-width: 400px !important;
+      width: 100% !important;
+    }
+    .Grãoinfo,
+    .Grãoinfo2,
+    .Grãoinfo3 {
+      width: 35px !important;
+      height: auto !important;
+      margin: 0 !important;
+      position: static !important;
+      flex-shrink: 0 !important;
+    }
+    .info1,
+    .info2,
+    .info3 {
+      margin: 0 !important;
+      position: static !important;
+      font-size: 18px !important;
+    }
+    /* --- FIM da seção Nosso Café --- */
+
+
+    /* --- Ajustes responsivos para as DEMAIS SEÇÕES (Serviços, Sobre, etc.) --- */
+    /* (Mantém as regras que já funcionavam para estas seções) */
+    .services-section { padding: 40px 15px; }
+    .services-grid { grid-template-columns: 1fr; gap: 30px; margin-left: 0; margin-right: 0; }
+    .service-card { padding: 15px; }
+    .service-card img { height: 250px; }
+    .service-card h3 { font-size: 20px; margin-left: 0; margin-right: 0; text-align: center; }
+    .floating-icon { display: none; }
+    .container { flex-direction: column; gap: 30px; margin-left: 0; padding: 20px 15px; }
+    .left-card { width: 250px; height: 280px; margin: 0 auto; }
+    .text-content { max-width: 100%; }
+    .Container2 { padding: 40px 15px; }
+    .principio-bloco { flex-direction: column; align-items: center; gap: 30px; }
+    .card { width: 100%; max-width: 350px; }
+    .Estabelecimento { padding: 40px 15px; }
+    .container3 { flex-direction: column-reverse; gap: 30px; }
+    .text-content2 { max-width: 100%; text-align: center; }
+    .Local { width: 80%; max-width: 400px; height: auto; margin: 0 auto;        margin-left: 32px;
+        margin-top: 18px; }
+    .Colaboradores { padding: 40px 15px; }
+    .container-caixas { flex-direction: column; align-items: center; gap: 30px; }
+    .caixa { width: 100%; max-width: 350px; height: auto; }
+    .contorno { height: auto; padding-bottom: 20px; }
+    .aspas { margin-left: auto; margin-right: auto; }
+    .jorge1, .jorge, .user { margin-left: auto; margin-right: auto; }
+    .equipamentos-destaque-section { padding: 60px 15px; }
+    .equipamentos-destaque-product-grid { grid-template-columns: 1fr; }
+    .footer-content { flex-direction: column; align-items: center; text-align: center; gap: 30px; }
+    .footer-column { padding: 0; min-width: unset; width: 100%; max-width: 350px; }
+    .footer-logo { margin: 0 auto 15px auto; }
+    .footer-links { margin-left: 0; }
+    .footer-links a { padding-left: 0; }
+    .footer-social { justify-content: center; }
+    .social-icons { justify-content: center; }
+    /* --- FIM dos ajustes das DEMAIS SEÇÕES --- */
+
+
+} /* Fim do @media (max-width: 992px) */
+
+
+/* --- Ajustes ADICIONAIS para telas MUITO PEQUENAS (até 576px) --- */
+@media (max-width: 576px) {
+
+    /* Cabeçalho mobile */
+    .mobile-header { padding: 0 1rem; height: 55px; background-color: white; }
+    .mobile-header .logo-img { height: 35px; }
+
+    /* Seção Anuncie: Refinamentos para telas muito pequenas */
+    .title {
+        font-size: 24px;
+    }
+    .Ocean {
+        width: 150px;
+    }
+    .image-container {
+        width: 250px; /* Ainda menor */
+        height: 200px;
+    }
+    .trator, .cortador {
+        width: 162px; /* Tamanho das imagens */
+        height: 156px;
+    }
+    .cortador {
+        top: 40px; /* Ajuste a sobreposição para telas menores */
+                margin-left: -37px;
+    }
+    .info {
+        font-size: 14px;
+        padding: 0 10px;
+    }
+    .anuncie-btn {
+        padding: 8px 18px;
+        font-size: 17px;
+    }
+
+    /* Ajustes na seção Nosso Café */
+    .curved-section { padding: 40px 15px !important; }
+    .coffee-info h1.nomecafe { font-size: 26px !important; margin-bottom: 15px !important; }
+    .img { width: 100px !important; margin-bottom: 15px !important; }
+    .info-item { font-size: 15px !important; gap: 10px !important; }
+    .Grãoinfo, .Grãoinfo2, .Grãoinfo3 { width: 25px !important; }
+    .info1, .info2, .info3 { font-size: 16px !important; }
+
+     /* Ajustes gerais de títulos */
+     h2 { font-size: 28px !important; }
+     .service-card h3 { font-size: 18px !important; }
+
+} /* Fim do @media (max-width: 576px) */
