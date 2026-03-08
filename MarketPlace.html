@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Detalhes do Equipamento - Ocean Coffee</title>
+  <link class="novo" rel="icon" href="IMG/Loginho2.png" type="image/png">
+  <link rel="stylesheet" href="CSS/loja2.css" />
+  <link rel="stylesheet" href="CSS/styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+
+  <header class="oc-header">
+    <div class="oc-container oc-header__container">
+      <a href="Index.html" class="oc-header__logo-link">
+        <img class="oc-header__logo-img" src="IMG/Loginho2.png" alt="Logotipo Ocean Coffee">
+      </a>
+      <nav class="oc-header-nav">
+        <a href="Market.html" class="oc-header-nav__link">Loja</a>
+        <a href="perfil.html" class="oc-header-nav__link">Minha Conta</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="oc-container">
+    <nav class="breadcrumb">
+        <a href="Market.html">Loja</a>
+        <i class="fas fa-chevron-right"></i>
+        <span id="breadcrumb-product-name">Detalhes do Equipamento</span>
+    </nav>
+
+    <div id="product-content" class="product-page-layout">
+      </div>
+    <div id="loading-message" style="text-align: center; padding: 4rem 0;">
+        <h2><i class="fas fa-spinner fa-spin"></i> Carregando informações...</h2>
+    </div>
+  </main>
+  
+ <footer class="footer">
+    <div class="footer-content">
+        <div class="footer-column footer-about">
+            <img src="IMG/Logo.png" alt="Logo Ocean Coffee" class="footer-logo">
+            <p>&copy; 2025 Ocean Coffee. <br>Todos os direitos reservados.</p>
+            <p style="margin-top: 10px; font-size: 0.8rem;">
+                <a href="equipe.html" style="color: #ccc; text-decoration: none;">Equipe de Desenvolvimento</a>
+            </p>
+        </div>
+        <div class="footer-column footer-links">
+            <h4>Links Rápidos</h4>
+            <a href="index.html#NossoCafe">Nosso Café</a>
+            <a href="index.html#Serviços">Serviços</a>
+            <a href="index.html#Sobre">Sobre</a>
+            <a href="index.html#NossoEstabelecimento">Estabelecimento</a>
+            <a href="index.html#Colaboradores">Colaboradores</a>
+        </div>
+        <div class="footer-column footer-company-info">
+            <h4>Sobre a Ocean Coffee</h4>
+            <p>A Ocean Coffee foi fundada em 01 de outubro de 2019, com a missão de revolucionar o mercado cafeeiro ao unir tradição e inovação.</p>
+        </div>
+        <div class="footer-column footer-social">
+            <h4>Siga-nos</h4>
+            <div class="social-icons">
+                <a href="#"><i class="fab fa-facebook-f"></i></a>
+                <a href="#"><i class="fab fa-instagram"></i></a>
+                <a href="#"><i class="fab fa-whatsapp"></i></a>
+            </div>
+        </div>
+    </div>
+</footer>
+  <script>
+    function changeImage(imageSrc) {
+      document.getElementById('mainProductImage').src = imageSrc;
+      document.querySelectorAll('.thumbnail').forEach(thumb => {
+        thumb.classList.remove('active');
+        if (thumb.getAttribute('data-src') === imageSrc) {
+          thumb.classList.add('active');
+        }
+      });
+    }
+  </script>
+
+  <script type="module">
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.44.1/+esm";
+
+    const supabaseUrl = "https://uldxazlnnpuoxfzsovmu.supabase.co";
+    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVsZHhhemxubnB1b3hmenNvdm11Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg3Mjg2NzgsImV4cCI6MjA2NDMwNDY3OH0.fyToys8_muc1XyUebJ19gxGEkCVM_cXg80UJR894xQY";
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        const productContent = document.getElementById('product-content');
+        const loadingMessage = document.getElementById('loading-message');
+        const breadcrumbProductName = document.getElementById('breadcrumb-product-name');
+
+        const params = new URLSearchParams(window.location.search);
+        const productId = params.get('id');
+
+        if (!productId) {
+            loadingMessage.innerHTML = '<h2>ID do produto não fornecido.</h2><p>Por favor, selecione um produto na loja.</p>';
+            return;
+        }
+
+        const { data: product, error } = await supabase
+            .from('aprovados')
+            .select('*')
+            .eq('id', productId)
+            .single();
+
+        if (error || !product) {
+            console.error('Erro ao buscar produto:', error);
+            loadingMessage.innerHTML = '<h2>Produto não encontrado.</h2><p>O produto que você está procurando pode ter sido removido ou não existe.</p>';
+            return;
+        }
+        
+        loadingMessage.style.display = 'none';
+        document.title = `${product.produto} - Ocean Coffee`;
+        breadcrumbProductName.textContent = product.produto;
+
+        const priceFormatted = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(product.preco);
+
+        let mainImage = product.imagens && product.imagens.length > 0 ? product.imagens[0] : 'IMG/placeholder.png';
+        let thumbnails = '';
+        if (product.imagens && product.imagens.length > 0) {
+            thumbnails = product.imagens.map((imgSrc, index) => 
+                `<img src="${imgSrc}" alt="Miniatura do produto ${index + 1}" class="thumbnail ${index === 0 ? 'active' : ''}" data-src="${imgSrc}" onclick="changeImage('${imgSrc}')">`
+            ).join('');
+        }
+        
+        const formattedPhone = product.contato.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+
+        productContent.innerHTML = `
+            <div class="product-gallery">
+                <div class="main-image">
+                    <img src="${mainImage}" alt="Imagem principal de ${product.produto}" id="mainProductImage">
+                </div>
+                <div class="thumbnail-images">
+                    ${thumbnails}
+                </div>
+            </div>
+
+            <div class="product-main-details">
+                <div class="product-info-card">
+                  <h1 class="product-title">${product.produto}</h1>
+                  <p class="product-price">${priceFormatted}</p>
+                  
+                  <div class="product-section">
+                      <h2 class="section-title"><i class="fas fa-align-left"></i> Descrição</h2>
+                      <p class="product-description">${product.descricao}</p>
+                  </div>
+                </div>
+                
+                <div class="seller-info-card">
+                  <h2 class="section-title"><i class="fas fa-user"></i> Informações do Vendedor</h2>
+                  <div class="seller-detail">
+                    <i class="fas fa-user-circle"></i>
+                    <span>${product.nome_usuario}</span>
+                  </div>
+                  <div class="seller-detail">
+                    <i class="fas fa-map-marker-alt"></i>
+                    <span>${product.local}</span>
+                  </div>
+                  <a href="https://wa.me/55${product.contato}?text=Olá, tenho interesse no seu anúncio: ${encodeURIComponent(product.produto)}" class="contact-button" target="_blank">
+                      <i class="fab fa-whatsapp"></i>
+                      <span>Entrar em Contato via WhatsApp</span>
+                  </a>
+                </div>
+            </div>
+        `;
+    });
+  </script>
+
+</body>
+</html>

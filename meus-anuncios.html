@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Meus Anúncios - Ocean Coffee</title>
+    <link rel="icon" href="IMG/Loginho2.png" type="image/png">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <link rel="stylesheet" href="CSS/styles.css">
+    <style>
+        /* ESTILOS GERAIS */
+        :root {
+            --color-primary: #0047a3;
+            --color-danger: #dc3545;
+            --color-success: #28a745;
+            --color-warning: #ffc107;
+            --color-text: #212529;
+            --color-text-muted: #6c757d;
+            --color-background: #f8f9fa;
+            --color-surface: #ffffff;
+            --color-border: #e9ecef;
+            --font-family-main: 'Inter', sans-serif;
+        }
+
+        body {
+            background-color: var(--color-background);
+            font-family: var(--font-family-main);
+            color: var(--color-text);
+            margin: 0;
+        }
+
+        .dashboard-layout {
+            display: grid;
+            grid-template-columns: 260px 1fr;
+            height: 100vh;
+        }
+
+        .dashboard-main {
+            overflow-y: auto;
+            padding: 2.5rem;
+        }
+
+        /* SIDEBAR (Desktop) */
+        .dashboard-sidebar {
+            background-color: var(--color-surface);
+            border-right: 1px solid var(--color-border);
+            display: flex;
+            flex-direction: column;
+            padding: 1.5rem;
+        }
+
+        .sidebar-header {
+            padding: 0 0.5rem 1.5rem 0.5rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid var(--color-border);
+            text-align: center;
+        }
+
+        .sidebar-header .logo-img {
+            height: 50px;
+        }
+
+        .user-profile-summary {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .user-profile-summary .avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background-color: var(--color-primary);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            font-weight: 600;
+            margin: 0 auto 1rem auto;
+        }
+
+        .user-profile-summary h3 {
+            font-size: 1.1rem;
+            font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .user-profile-summary p {
+            font-size: 0.875rem;
+            color: var(--color-text-muted);
+            word-break: break-all;
+        }
+
+        .sidebar-nav {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-nav-main {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .sidebar-nav-logout {
+            margin-top: auto;
+        }
+
+        .sidebar-nav a {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.875rem 1rem;
+            border-radius: 8px;
+            text-decoration: none;
+            color: var(--color-text-muted);
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .sidebar-nav a:hover {
+            background-color: var(--color-background);
+            color: var(--color-text);
+        }
+
+        .sidebar-nav a.active {
+            background-color: var(--color-primary);
+            color: white;
+        }
+
+        .sidebar-nav a i {
+            width: 20px;
+            text-align: center;
+            font-size: 1.1rem;
+        }
+
+        #logout-btn:hover {
+            color: var(--color-danger);
+            background-color: #fbebee;
+        }
+
+        .action-btn.edit:hover {
+            color: var(--color-primary);
+        }
+
+        /* CONTEÚDO PRINCIPAL E CARDS DE ANÚNCIO */
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .page-header h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .ad-list {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1rem;
+        }
+
+        .ad-card {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 1rem;
+            background-color: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: 12px;
+            padding: 1rem;
+            transition: box-shadow 0.2s ease, opacity 0.5s ease;
+            overflow: hidden;
+        }
+
+        .ad-card:hover {
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        }
+
+        .ad-image {
+            width: 80px;
+            height: 80px;
+            border-radius: 8px;
+            object-fit: cover;
+            flex-shrink: 0;
+        }
+
+        .ad-info {
+            flex-grow: 1;
+            min-width: 0;
+        }
+
+        .ad-info h3 {
+            font-size: 1.05rem;
+            font-family: var(--font-family-main);
+            font-weight: 600;
+            margin: 0 0 0.25rem 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .ad-info p {
+            margin: 0 0 0.25rem 0;
+            color: var(--color-text-muted);
+            font-size: 0.9rem;
+        }
+
+        .ad-price {
+            font-size: 1rem;
+            font-weight: 500;
+            color: var(--color-primary);
+        }
+        
+        /* ESTILO PARA A DATA (SIMPLIFICADO E SEM COR) */
+        .ad-info p.ad-date {
+            font-size: 0.85rem;
+            color: var(--color-text-muted); /* Cor padrão (cinza) */
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 4px;
+        }
+        .ad-info p.ad-date i {
+            font-size: 0.8rem;
+        }
+        /* FIM DO ESTILO DA DATA */
+
+
+        .ad-status-actions {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 0.5rem;
+            flex-shrink: 0;
+            margin-left: auto;
+        }
+        
+        .status-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            position: relative;
+        }
+
+        .ad-status {
+            display: inline-block;
+            padding: 4px 10px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            border-radius: 20px;
+            color: white;
+        }
+
+        .ad-status.aprovados { background-color: var(--color-success); }
+        .ad-status.pendentes { background-color: var(--color-warning); color: var(--color-text); }
+        .ad-status.rejeitados { background-color: var(--color-danger); }
+
+        .ad-actions { display: flex; }
+        .action-btn { background: none; border: none; cursor: pointer; color: var(--color-text-muted); font-size: 1.1rem; padding: 5px; transition: color 0.2s; }
+        .action-btn.delete:hover { color: var(--color-danger); }
+        
+        /* ESTILOS PARA MOTIVO DA REJEIÇÃO E SELO */
+        .rejection-reason-icon { color: var(--color-text-muted); cursor: pointer; font-size: 1.2rem; }
+        .notification-badge { position: absolute; top: -5px; right: -5px; width: 10px; height: 10px; background-color: var(--color-danger); border-radius: 50%; border: 2px solid var(--color-surface); }
+        .rejection-reason-box { display: none; width: 100%; background-color: #fff8f8; border: 1px solid #f9c5c5; border-radius: 8px; padding: 1rem; margin-top: 1rem; font-size: 0.9rem; line-height: 1.5; white-space: pre-wrap; color: var(--color-danger); }
+        .rejection-reason-box.visible { display: block; }
+        
+        /* FILTROS */
+        .filter-bar { display: flex; gap: 0.5rem; margin-bottom: 2rem; background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: 8px; padding: 0.5rem; flex-wrap: wrap; }
+        .filter-btn { background-color: transparent; border: none; padding: 0.625rem 1rem; border-radius: 6px; font-family: var(--font-family-main); font-size: 0.9rem; font-weight: 500; color: var(--color-text-muted); cursor: pointer; transition: all 0.2s ease; }
+        .filter-btn:hover { background-color: var(--color-background); color: var(--color-text); }
+        .filter-btn.active { background-color: var(--color-primary); color: white; }
+
+        #no-ads-message { text-align: center; padding: 4rem; background-color: var(--color-surface); border-radius: 12px; border: 1px dashed var(--color-border); }
+        #no-ads-message h2 { font-size: 1.5rem; margin-bottom: 0.5rem; }
+        #no-ads-message p { color: var(--color-text-muted); margin-bottom: 1.5rem; }
+        .new-ad-btn { display: inline-block; text-decoration: none; background-color: var(--color-primary); color: white; padding: 0.875rem 1.5rem; border-radius: 8px; font-weight: 500; transition: background-color 0.2s; }
+        .new-ad-btn:hover { background-color: #00337a; }
+        
+        /* --- PAGINAÇÃO (NOVO ESTILO) --- */
+        .pagination-container { display: flex; justify-content: space-between; align-items: center; padding-top: 2rem; margin-top: 1rem; border-top: 1px solid var(--color-border); }
+        .pagination-info { font-size: 0.9rem; color: var(--color-text-muted); }
+        .pagination-controls { display: flex; align-items: center; gap: 5px; }
+        .pagination-controls button {
+            background-color: var(--color-surface);
+            color: var(--color-text-muted);
+            border: 1px solid var(--color-border);
+            padding: 8px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .pagination-controls button:hover:not(:disabled) {
+            background-color: var(--color-primary);
+            color: white;
+            border-color: var(--color-primary);
+        }
+        .pagination-controls button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .pagination-controls button.active {
+            background-color: var(--color-primary);
+            color: white;
+            border-color: var(--color-primary);
+        }
+        .pagination-controls .ellipsis {
+            padding: 8px 5px;
+            color: var(--color-text-muted);
+        }
+
+        /* ESTILOS DOS POP-UPS */
+        .popup-container { position: fixed; top: 20px; right: 20px; z-index: 10000; display: flex; flex-direction: column; gap: 12px; pointer-events: none; }
+        .popup { display: flex; align-items: center; min-width: 300px; padding: 16px 22px; border-radius: 8px; color: white; font-family: 'Inter', sans-serif; font-size: 0.95rem; font-weight: 500; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15); transform: translateX(calc(100% + 20px)); opacity: 0; transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1); pointer-events: all; }
+        .popup.show { transform: translateX(0); opacity: 1; }
+        .popup i { font-size: 1.25rem; margin-right: 14px; }
+        .popup.success { background-color: #28a745; }
+        .popup.error { background-color: #dc3545; }
+        .popup.info { background-color: #0d6efd; }
+        .confirmation-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 9998; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s ease; pointer-events: none; }
+        .confirmation-overlay.show { opacity: 1; pointer-events: auto; }
+        .confirmation-modal { background-color: white; padding: 2rem; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); text-align: center; max-width: 400px; width: 90%; transform: scale(0.9); opacity: 0; transition: all 0.3s ease; }
+        .confirmation-overlay.show .confirmation-modal { transform: scale(1); opacity: 1; }
+        .confirmation-modal h3 { font-size: 1.25rem; font-weight: 600; margin-top: 0; margin-bottom: 0.75rem; }
+        .confirmation-modal p { color: #6c757d; margin-bottom: 1.75rem; }
+        .confirmation-actions { display: flex; gap: 1rem; justify-content: center; }
+        .confirmation-actions button { border: none; padding: 0.75rem 1.5rem; border-radius: 8px; font-family: 'Inter', sans-serif; font-weight: 500; font-size: 1rem; cursor: pointer; transition: all 0.2s ease; }
+        .confirmation-btn-cancel { background-color: #e9ecef; color: #495057; }
+        .confirmation-btn-cancel:hover { background-color: #dee2e6; }
+        .confirmation-btn-confirm { background-color: #dc3545; color: white; }
+        .confirmation-btn-confirm:hover { background-color: #c82333; }
+
+        /* RESPONSIVIDADE & MOBILE NAV */
+        .mobile-header, .mobile-nav, .nav-overlay { display: none; }
+        @media (max-width: 992px) {
+            .dashboard-layout { grid-template-columns: 1fr; }
+            .dashboard-sidebar { display: none; }
+            .dashboard-main { padding: 1.5rem; padding-top: 80px; }
+            .page-header h1 { font-size: 1.5rem; }
+            .sair{text-decoration: none;}
+
+            .ad-card {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .ad-card > * {
+                width: 100%;
+            }
+            .ad-image {
+                width: 100%;
+                height: 150px;
+                margin-bottom: 0.5rem;
+            }
+            .ad-status-actions {
+                flex-direction: row;
+                justify-content: space-between;
+                align-items: center;
+                margin-top: 0.5rem;
+            }
+
+            .mobile-header { display: flex; justify-content: space-between; align-items: center; padding: 0 1.5rem; height: 60px; background-color: var(--color-surface); border-bottom: 1px solid var(--color-border); position: fixed; top: 0; left: 0; width: 100%; z-index: 100; }
+            .mobile-header .logo-img { height: 35px; }
+            .menu-toggle { background: none; border: none; font-size: 1.5rem; color: var(--color-text); cursor: pointer; }
+            .mobile-nav { display: block; position: fixed; top: 0; left: -100%; width: 80%; max-width: 300px; height: 100vh; background-color: var(--color-surface); z-index: 110; transition: left 0.3s ease-in-out; padding: 1.5rem; display: flex; flex-direction: column; }
+            .mobile-nav.is-open { left: 0; box-shadow: 5px 0 15px rgba(0,0,0,0.1); }
+            .mobile-nav .sidebar-header { padding-bottom: 1rem; margin-bottom: 1rem; }
+            .mobile-nav-links { display: flex; flex-direction: column; gap: 0.75rem; }
+            .mobile-nav-links a { color: var(--color-text-muted); text-decoration: none; font-size: 1.1rem; font-weight: 500; padding: 1rem; border-radius: 8px; display: flex; align-items: center; gap: 1rem; }
+            .mobile-nav-links a:hover { background-color: var(--color-background); }
+            .mobile-nav-links a i { width: 20px; text-align: center; }
+            .mobile-logout { margin-top: auto; }
+            .nav-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 105; }
+            .nav-overlay.is-open { display: block; }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="dashboard-layout">
+        <aside class="dashboard-sidebar">
+            <div class="sidebar-header"><a href="index.html"><img src="IMG/Loginho2.png" alt="Logo Ocean Coffee"
+                        class="logo-img"></a></div>
+            <div class="user-profile-summary">
+                <div class="avatar" id="avatar-inicial"></div>
+                <h3 id="welcome-message">Carregando...</h3>
+                <p id="user-email-sidebar"></p>
+            </div>
+            <nav class="sidebar-nav">
+                <div class="sidebar-nav-main">
+                    <a href="perfil.html"><i class="fas fa-user-circle"></i><span>Meu Perfil</span></a>
+                    <a href="meus-anuncios.html" class="active"><i class="fas fa-bullhorn"></i><span>Meus
+                            Anúncios</span></a>
+                    <a href="anuncie.html"><i class="fas fa-plus-circle"></i><span>Anunciar Novo</span></a>
+                </div>
+                <div class="sidebar-nav-logout"><a href="#" id="logout-btn"><i
+                            class="fas fa-sign-out-alt"></i><span>Sair</span></a></div>
+            </nav>
+        </aside>
+
+        <main class="dashboard-main">
+            <header class="mobile-header">
+                <a href="index.html"><img src="IMG/Loginho2.png" alt="Logo Ocean Coffee" class="logo-img"></a>
+                <button class="menu-toggle" id="menu-toggle" aria-label="Abrir menu">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </header>
+
+            <div class="page-header">
+                <h1>Meus Anúncios</h1>
+            </div>
+
+            <div class="filter-bar" id="filter-bar">
+                <button class="filter-btn active" data-filter="todos">Todos</button>
+                <button class="filter-btn" data-filter="aprovados">Aprovados</button>
+                <button class="filter-btn" data-filter="pendentes">Pendentes</button>
+                <button class="filter-btn" data-filter="rejeitados">Rejeitados</button>
+            </div>
+
+            <div class="ad-list" id="ad-list"></div>
+            <div id="no-ads-message" style="display: none;">
+                <h2>Você ainda não tem anúncios.</h2>
+                <p>Que tal criar seu primeiro anúncio e começar a vender?</p>
+                <a href="anuncie.html" class="new-ad-btn"><i class="fas fa-plus-circle"></i> Anunciar Agora</a>
+            </div>
+            <div id="pagination-container" class="pagination-container"></div>
+        </main>
+    </div>
+
+    <div class="nav-overlay" id="nav-overlay"></div>
+    <nav class="mobile-nav" id="mobile-nav">
+        <div class="sidebar-header">
+            <h3 id="mobile-welcome-message">Olá!</h3>
+        </div>
+        <div class="mobile-nav-links">
+            <a href="perfil.html"><i class="fas fa-user-circle"></i><span>Meu Perfil</span></a>
+            <a href="meus-anuncios.html"><i class="fas fa-bullhorn"></i><span>Meus Anúncios</span></a>
+            <a href="anuncie.html"><i class="fas fa-plus-circle"></i><span>Anunciar Novo</span></a>
+        </div>
+        <div class="mobile-logout">
+            <a href="#" id="mobile-logout-btn" class="sair"><i class="fas fa-sign-out-alt"></i><span
+                    style="margin-left: 1rem;">Sair</span></a>
+        </div>
+    </nav>
+
+    <script type="module">
+        import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.44.1/+esm";
+
+        const supabaseUrl = "https://uldxazlnnpuoxfzsovmu.supabase.co";
+        const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVsZHhhemxubnB1b3hmenNvdm11Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg3Mjg2NzgsImV4cCI6MjA2NDMwNDY3OH0.fyToys8_muc1XyUebJ19gxGEkCVM_cXg80UJR894xQY";
+        const supabase = createClient(supabaseUrl, supabaseKey);
+
+        async function protegerPagina() {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) { window.location.replace('Login.html'); }
+        }
+        protegerPagina();
+
+        function ensurePopupContainer() { let c = document.getElementById('popup-container'); if (!c) { c = document.createElement('div'); c.id = 'popup-container'; c.className = 'popup-container'; document.body.appendChild(c); } return c; }
+        
+        function showPopup(message, type = 'info', duration = 3500) {
+            const c = ensurePopupContainer();
+            const p = document.createElement('div');
+            p.className = `popup ${type}`;
+            let i = 'fas fa-info-circle';
+            if (type === 'success') i = 'fas fa-check-circle';
+            if (type === 'error') i = 'fas fa-times-circle';
+            p.innerHTML = `<i class="${i}"></i> <div>${message}</div>`;
+            c.prepend(p);
+            requestAnimationFrame(() => p.classList.add('show'));
+            setTimeout(() => { p.classList.remove('show'); p.addEventListener('transitionend', () => p.remove()); }, duration);
+        }
+
+        function showConfirmationPopup(title, message, options = {}) {
+            const { confirmText = 'Sim', cancelText = 'Cancelar' } = options;
+            return new Promise((resolve) => {
+                const o = document.createElement('div');
+                o.className = 'confirmation-overlay';
+                o.innerHTML = `<div class="confirmation-modal"><h3>${title}</h3><p>${message}</p><div class="confirmation-actions"><button class="confirmation-btn-cancel">${cancelText}</button><button class="confirmation-btn-confirm">${confirmText}</button></div></div>`;
+                const close = (result) => { o.classList.remove('show'); o.addEventListener('transitionend', () => { o.remove(); resolve(result); }); };
+                o.querySelector('.confirmation-btn-cancel').addEventListener('click', () => close(false));
+                o.querySelector('.confirmation-btn-confirm').addEventListener('click', () => close(true));
+                document.body.appendChild(o);
+                requestAnimationFrame(() => o.classList.add('show'));
+            });
+        }
+
+        document.addEventListener("DOMContentLoaded", async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+
+            const { data: profile } = await supabase.from("usuarios").select("nome, email").eq("user_id", user.id).single();
+            if (profile) {
+                const firstName = profile.nome.split(' ')[0];
+                document.getElementById('welcome-message').textContent = firstName;
+                document.getElementById('mobile-welcome-message').textContent = `Olá, ${firstName}!`;
+                document.getElementById('user-email-sidebar').textContent = profile.email;
+                document.getElementById('avatar-inicial').textContent = profile.nome.charAt(0).toUpperCase();
+            }
+
+            const adList = document.getElementById('ad-list');
+            const noAdsMessage = document.getElementById('no-ads-message');
+            const filterBar = document.getElementById('filter-bar');
+            let allUserAds = [];
+            let filteredAds = [];
+            let currentPage = 1;
+            const rowsPerPage = 5; // Anúncios por página
+
+            async function loadAds() {
+                adList.innerHTML = '<p style="text-align: center; padding: 2rem;">Carregando...</p>';
+                try {
+                    // ***** MUDANÇA IMPORTANTE: Pedindo 'created_at' *****
+                    // 'created_at' é a coluna de data automática do Supabase.
+                    const { data: approvedAds, error: approvedError } = await supabase.from('aprovados').select('*, created_at').eq('user_id', user.id);
+                    if (approvedError) throw approvedError;
+                    
+                    // Pedimos 'data_rejeicao'
+                    const { data: otherAds, error: otherError } = await supabase.from('produtos').select('*, motivo_rejeicao, rejeicao_vista, data_rejeicao').eq('user_id', user.id);
+                    if (otherError) throw otherError;
+
+                    // ***** LÓGICA DE DATA MAIS ROBUSTA *****
+                    const mappedApproved = (approvedAds || []).map(ad => ({
+                        ...ad, 
+                        status: 'aprovados', 
+                        dataTable: 'aprovados', 
+                        // Use 'data_aprovacao' PRIMEIRO. Se for nula, use 'created_at'.
+                        date: ad.data_aprovacao || ad.created_at 
+                    }));
+
+                    const mappedOthers = (otherAds || []).map(ad => ({
+                        ...ad, 
+                        status: ad.aprovado === false ? 'rejeitados' : 'pendentes', 
+                        dataTable: 'produtos', 
+                        // Se rejeitado, use 'data_rejeicao'. Se for nula, use a data de envio 'data'.
+                        // Se pendente, use 'data' (envio).
+                        date: ad.aprovado === false ? (ad.data_rejeicao || ad.data) : ad.data
+                    }));
+                    // ***** FIM DA LÓGICA DE DATA *****
+
+                    allUserAds = [...mappedApproved, ...mappedOthers];
+                    // Ordena por data (os que tiverem data nula ou inválida vão para o fim)
+                    allUserAds.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+
+                    displayPage();
+
+                } catch (error) {
+                    console.error("Erro ao carregar anúncios:", error);
+                    showPopup('Erro ao carregar seus anúncios.', 'error');
+                    adList.innerHTML = '<p style="text-align: center; padding: 2rem; color: red;">Falha ao carregar anúncios.</p>';
+                }
+            }
+
+            function displayPage() {
+                const currentFilter = document.querySelector('.filter-btn.active').dataset.filter;
+                filteredAds = allUserAds;
+                if (currentFilter !== 'todos') {
+                    filteredAds = allUserAds.filter(ad => ad.status === currentFilter);
+                }
+                renderAds(filteredAds);
+                setupPagination(filteredAds);
+            }
+            
+            function renderAds(ads) {
+                adList.innerHTML = '';
+                const startIndex = (currentPage - 1) * rowsPerPage;
+                const paginatedItems = ads.slice(startIndex, startIndex + rowsPerPage);
+
+                if (ads.length === 0) {
+                    noAdsMessage.style.display = 'block';
+                    const filterText = { todos: 'anúncios', aprovados: 'anúncios aprovados', pendentes: 'anúncios pendentes', rejeitados: 'anúncios rejeitados' };
+                    noAdsMessage.querySelector('h2').textContent = `Você não tem ${filterText[document.querySelector('.filter-btn.active').dataset.filter]}.`;
+                } else {
+                    noAdsMessage.style.display = 'none';
+                    paginatedItems.forEach(ad => {
+                        const adCard = document.createElement('div');
+                        adCard.className = 'ad-card';
+                        adCard.dataset.id = ad.id;
+                        adCard.dataset.table = ad.dataTable;
+
+                        const statusClass = ad.status;
+                        const statusText = { aprovados: 'Aprovado', pendentes: 'Pendente', rejeitados: 'Rejeitado' }[statusClass];
+                        
+                        let dateText = '';
+                        if (statusClass === 'aprovados') {
+                            dateText = 'Aprovado em';
+                        } else if (statusClass === 'pendentes') {
+                            dateText = 'Enviado em';
+                        } else if (statusClass === 'rejeitados') {
+                            dateText = 'Rejeitado em';
+                        }
+                        
+                        // ***** CORREÇÃO FINAL 'Invalid Date' *****
+                        let formattedDate;
+                        // 1. Checa se a data (que agora já tem o fallback) existe
+                        if (ad.date) {
+                            // 2. Adiciona o 'Z' para garantir que o JS leia como UTC
+                            const dataUTC = new Date(ad.date + "Z");
+                            
+                            // 3. Verifica se a data criada é válida
+                            if (!isNaN(dataUTC.getTime())) {
+                                formattedDate = dataUTC.toLocaleString('pt-BR', { timeZone: "America/Sao_Paulo" });
+                            } else {
+                                // Isso acontece se ad.date for uma string inválida
+                                formattedDate = 'Data indisponível'; 
+                            }
+                        } else {
+                            // Isso acontece se ad.date for null ou undefined
+                            formattedDate = 'Data não informada'; 
+                        }
+                        // ***** FIM DA CORREÇÃO *****
+
+                        let reasonIconHtml = '';
+                        if (ad.status === 'rejeitados' && ad.motivo_rejeicao) {
+                            const badgeHtml = ad.rejeicao_vista === false ? '<div class="notification-badge"></div>' : '';
+                            reasonIconHtml = `
+                                <div class="status-container">
+                                    <i class="fas fa-envelope rejection-reason-icon" title="Ver motivo da rejeição"></i>
+                                    ${badgeHtml}
+                                </div>`;
+                        }
+                        
+                        const reasonBoxHtml = ad.status === 'rejeitados' && ad.motivo_rejeicao
+                            ? `<div class="rejection-reason-box">${ad.motivo_rejeicao}</div>`
+                            : '';
+
+                        // ***** HTML SEM CORES E ÍCONES DINÂMICOS NA DATA *****
+                        adCard.innerHTML = `
+                            <img src="${ad.imagens[0] || 'IMG/placeholder.png'}" alt="${ad.produto}" class="ad-image">
+                            <div class="ad-info">
+                                <h3>${ad.produto}</h3>
+                                <p class="ad-price">${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(ad.preco)}</p>
+                                <p class="ad-date">
+                                    <i class="fas fa-calendar-alt"></i>
+                                    ${dateText}: ${formattedDate}
+                                </p> 
+                            </div>
+                            <div class="ad-status-actions">
+                                <div class="status-container">
+                                    <span class="ad-status ${statusClass}">${statusText}</span>
+                                    ${reasonIconHtml}
+                                </div>
+                                <div class="ad-actions">
+                                    ${ad.status === 'pendentes' || ad.status === 'rejeitados' ? `<a href="editar-anuncio.html?id=${ad.id}" class="action-btn edit" title="Editar anúncio"><i class="fas fa-pencil-alt"></i></a>` : ''}
+                                    <button class="action-btn delete" title="Excluir anúncio"><i class="fas fa-trash-alt"></i></button>
+                                </div>
+                            </div>
+                            ${reasonBoxHtml}
+                        `;
+                        adList.appendChild(adCard);
+                    });
+                }
+            }
+
+            function setupPagination(ads) {
+                const paginationContainer = document.getElementById("pagination-container");
+                paginationContainer.innerHTML = "";
+                const pageCount = Math.ceil(ads.length / rowsPerPage);
+                if (pageCount <= 1) return;
+
+                const pageInfo = document.createElement('div');
+                pageInfo.className = 'pagination-info';
+                pageInfo.textContent = `Mostrando ${Math.min((currentPage - 1) * rowsPerPage + 1, ads.length)} a ${Math.min(currentPage * rowsPerPage, ads.length)} de ${ads.length} anúncios`;
+
+                const controls = document.createElement('div');
+                controls.className = 'pagination-controls';
+
+                const createButton = (text, page, isDisabled = false, isActive = false) => {
+                    const button = document.createElement('button');
+                    button.innerHTML = text;
+                    button.disabled = isDisabled;
+                    if (isActive) button.classList.add('active');
+                    if (page) {
+                        button.addEventListener('click', () => {
+                            currentPage = page;
+                            displayPage();
+                        });
+                    }
+                    return button;
+                };
+                
+                const createEllipsis = () => {
+                    const span = document.createElement('span');
+                    span.className = 'ellipsis';
+                    span.textContent = '...';
+                    return span;
+                };
+
+                controls.appendChild(createButton('&laquo; Anterior', currentPage - 1, currentPage === 1));
+
+                const maxVisibleButtons = 5;
+                let startPage, endPage;
+
+                if (pageCount <= maxVisibleButtons) {
+                    startPage = 1;
+                    endPage = pageCount;
+                } else {
+                    const maxPagesShown = maxVisibleButtons - 2;
+                    let maxPagesBeforeCurrent = Math.floor(maxPagesShown / 2);
+                    let maxPagesAfterCurrent = Math.ceil(maxPagesShown / 2) - 1;
+
+                    if (currentPage <= maxPagesBeforeCurrent) {
+                        startPage = 1;
+                        endPage = maxPagesShown;
+                    } else if (currentPage + maxPagesAfterCurrent >= pageCount) {
+                        startPage = pageCount - maxPagesShown + 1;
+                        endPage = pageCount;
+                    } else {
+                        startPage = currentPage - maxPagesBeforeCurrent;
+                        endPage = currentPage + maxPagesAfterCurrent;
+                    }
+                }
+
+                if (startPage > 1) {
+                    controls.appendChild(createButton('1', 1));
+                    if (startPage > 2) controls.appendChild(createEllipsis());
+                }
+
+                for (let i = startPage; i <= endPage; i++) {
+                    controls.appendChild(createButton(i, i, false, i === currentPage));
+                }
+
+                if (endPage < pageCount) {
+                    if (endPage < pageCount - 1) controls.appendChild(createEllipsis());
+                    controls.appendChild(createButton(pageCount, pageCount));
+                }
+
+                controls.appendChild(createButton('Próximo &raquo;', currentPage + 1, currentPage === pageCount));
+
+                paginationContainer.appendChild(pageInfo);
+                paginationContainer.appendChild(controls);
+            }
+            
+            filterBar.addEventListener('click', (e) => {
+                if (e.target.classList.contains('filter-btn')) {
+                    document.querySelector('.filter-btn.active').classList.remove('active');
+                    e.target.classList.add('active');
+                    currentPage = 1;
+                    displayPage();
+                }
+            });
+
+            adList.addEventListener('click', async (e) => {
+                if (e.target.classList.contains('rejection-reason-icon')) {
+                    const adCard = e.target.closest('.ad-card');
+                    const reasonBox = adCard.querySelector('.rejection-reason-box');
+                    const badge = e.target.parentElement.querySelector('.notification-badge');
+
+                    if (reasonBox) {
+                        reasonBox.classList.toggle('visible');
+                        if (badge) {
+                            badge.remove();
+                            const adId = adCard.dataset.id;
+                            await supabase
+                                .from('produtos')
+                                .update({ rejeicao_vista: true })
+                                .eq('id', adId);
+                        }
+                    }
+                    return;
+                }
+
+                const deleteButton = e.target.closest('.delete');
+                if (deleteButton) {
+                    const adCard = deleteButton.closest('.ad-card');
+                    const adId = adCard.dataset.id;
+                    const adTable = adCard.dataset.table;
+
+                    const confirmed = await showConfirmationPopup('Excluir Anúncio', 'Tem certeza que deseja excluir este anúncio? Esta ação não pode ser desfeita.', { confirmText: 'Sim, Excluir' });
+
+                    if (confirmed) {
+                        const { error: dbError } = await supabase.from(adTable).delete().eq('id', adId);
+                        if (dbError) {
+                            showPopup(`Erro ao excluir o anúncio: ${dbError.message}`, 'error');
+                            return;
+                        }
+                        showPopup('Anúncio excluído com sucesso!', 'success');
+                        allUserAds = allUserAds.filter(ad => !(ad.id == adId && ad.dataTable == adTable));
+                        displayPage();
+                    }
+                }
+            });
+
+            async function handleLogout(e) {
+                e.preventDefault();
+                const userConfirmed = await showConfirmationPopup('Confirmar Saída', 'Você tem certeza que deseja sair da sua conta?', { confirmText: 'Sim, Sair' });
+                if (userConfirmed) {
+                    showPopup("Saindo...", 'info', 1500);
+                    await supabase.auth.signOut();
+                    setTimeout(() => window.location.replace("index.html"), 500);
+                }
+            }
+            document.getElementById('logout-btn').addEventListener('click', handleLogout);
+            document.getElementById('mobile-logout-btn').addEventListener('click', handleLogout);
+
+            const menuToggle = document.getElementById('menu-toggle');
+            const mobileNav = document.getElementById('mobile-nav');
+            const navOverlay = document.getElementById('nav-overlay');
+
+            function closeMenu() {
+                mobileNav.classList.remove('is-open');
+                navOverlay.classList.remove('is-open');
+            }
+
+            menuToggle.addEventListener('click', () => {
+                mobileNav.classList.add('is-open');
+                navOverlay.classList.add('is-open');
+            });
+            navOverlay.addEventListener('click', closeMenu);
+
+            await loadAds();
+        });
+    </script>
+</body>
+
+</html>

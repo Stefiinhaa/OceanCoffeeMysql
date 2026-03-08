@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Editar Anúncio - Ocean Coffee</title>
+    <link rel="icon" href="IMG/Loginho2.png" type="image/png">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <link rel="stylesheet" href="CSS/styles.css"> 
+    <script src="https://unpkg.com/imask"></script>
+    <style>
+        /* ESTILOS COPIADOS DIRETAMENTE DE MEUS-ANUNCIOS.HTML PARA CONSISTÊNCIA */
+        :root { --color-primary: #0047a3; --color-danger: #dc3545; --color-success: #28a745; --color-text: #212529; --color-text-muted: #6c757d; --color-background: #f8f9fa; --color-surface: #ffffff; --color-border: #e9ecef; --font-family-main: 'Inter', sans-serif; }
+        body { background-color: var(--color-background); font-family: var(--font-family-main); color: var(--color-text); margin: 0; }
+        .dashboard-layout { display: grid; grid-template-columns: 260px 1fr; height: 100vh; }
+        .dashboard-main { overflow-y: auto; padding: 2.5rem; }
+        .dashboard-sidebar { background-color: var(--color-surface); border-right: 1px solid var(--color-border); display: flex; flex-direction: column; padding: 1.5rem; }
+        .sidebar-header { padding: 0 0.5rem 1.5rem 0.5rem; margin-bottom: 1.5rem; border-bottom: 1px solid var(--color-border); text-align: center; }
+        .sidebar-header .logo-img { height: 50px; }
+        .user-profile-summary { text-align: center; margin-bottom: 2rem; }
+        .user-profile-summary .avatar { width: 80px; height: 80px; border-radius: 50%; background-color: var(--color-primary); color: white; display: flex; align-items: center; justify-content: center; font-size: 2rem; font-weight: 600; margin: 0 auto 1rem auto; }
+        .user-profile-summary h3 { font-size: 1.1rem; font-weight: 600; margin: 0; }
+        .user-profile-summary p { font-size: 0.875rem; color: var(--color-text-muted); word-break: break-all; }
+        .sidebar-nav { flex-grow: 1; display: flex; flex-direction: column; }
+        .sidebar-nav-main { display: flex; flex-direction: column; gap: 0.5rem; }
+        .sidebar-nav-logout { margin-top: auto; }
+        .sidebar-nav a { display: flex; align-items: center; gap: 1rem; padding: 0.875rem 1rem; border-radius: 8px; text-decoration: none; color: var(--color-text-muted); font-weight: 500; transition: all 0.2s ease; }
+        .sidebar-nav a:hover { background-color: var(--color-background); color: var(--color-text); }
+        .sidebar-nav a.active { background-color: var(--color-primary); color: white; }
+        .sidebar-nav a i { width: 20px; text-align: center; font-size: 1.1rem; }
+        #logout-btn:hover { color: var(--color-danger); background-color: #fbebee; }
+        .dashboard-main h1 { font-size: 2rem; font-weight: 700; margin-bottom: 2rem; }
+        #anuncioForm { display: flex; flex-direction: column; gap: 1.5rem; }
+        .form-section { background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: 12px; padding: 1.75rem; }
+        .form-section h3 { font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans'; font-size: 1.2rem; font-weight: 600; color: var(--color-primary); padding-bottom: 1rem; margin-bottom: 1.5rem; border-bottom: 1px solid var(--color-border); display: flex; align-items: center; gap: 0.75rem; margin-top: 0; }
+        .fields-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; }
+        .form-group { display: flex; flex-direction: column; }
+        .form-group.full-width { grid-column: 1 / -1; }
+        .form-group input, .form-group textarea { width: 100%; padding: 0.875rem 1rem; border: 1px solid var(--color-border); border-radius: 8px; font-size: 1rem; transition: border-color 0.2s, box-shadow 0.2s; font-family: var(--font-family-main); resize: vertical; box-sizing: border-box; }
+        .form-group input:focus, .form-group textarea:focus { outline: none; border-color: var(--color-primary); box-shadow: 0 0 0 3px rgba(0, 71, 163, 0.1); }
+        .form-actions { display: flex; justify-content: flex-start; margin-top: 1rem; }
+        .publicar-btn { background: var(--color-success); color: #fff; padding: 0.875rem 2rem; border-radius: 8px; border: none; font-weight: 500; font-size: 1rem; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; justify-content: center; gap: 0.5rem; }
+        .publicar-btn:hover { background-color: #1a7444; transform: translateY(-3px); box-shadow: 0 6px 20px rgba(0, 71, 163, 0.2); }
+        .publicar-btn:disabled { background: #adb5bd; cursor: not-allowed; transform: none; box-shadow: none; }
+        .image-upload-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1.5rem; }
+        .image-upload-box { border: 2px dashed var(--color-border); border-radius: 10px; cursor: pointer; transition: all 0.2s; position: relative; overflow: hidden; background-color: var(--color-background); aspect-ratio: 16 / 10; display: flex; align-items: center; justify-content: center; }
+        .image-upload-box:hover { border-color: var(--color-primary); background-color: #eef2f5; }
+        .image-upload-box input[type="file"] { display: none; }
+        .image-preview { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; }
+        .upload-placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; color: var(--color-text-muted); position: absolute; }
+        .upload-placeholder i { font-size: 2rem; margin-bottom: 0.5rem; color: var(--color-primary); }
+        .upload-placeholder p { font-weight: 500; font-size: 0.9rem; }
+        
+        /* Popups e Responsividade */
+        .popup-container { position: fixed; top: 20px; right: 20px; z-index: 10000; display: flex; flex-direction: column; gap: 12px; pointer-events: none; }
+        .popup { display: flex; align-items: center; min-width: 300px; padding: 16px 22px; border-radius: 8px; color: white; font-family: 'Inter', sans-serif; font-size: 0.95rem; font-weight: 500; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15); transform: translateX(calc(100% + 20px)); opacity: 0; transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1); pointer-events: all; }
+        .popup.show { transform: translateX(0); opacity: 1; }
+        .popup i { font-size: 1.25rem; margin-right: 14px; }
+        .popup.success { background-color: #28a745; }
+        .popup.error { background-color: #dc3545; }
+        .popup.info { background-color: #0d6efd; }
+        .confirmation-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 9998; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s ease; pointer-events: none; }
+        .confirmation-overlay.show { opacity: 1; pointer-events: auto; }
+        .confirmation-modal { background-color: white; padding: 2rem; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); text-align: center; max-width: 400px; width: 90%; transform: scale(0.9); opacity: 0; transition: all 0.3s ease; }
+        .confirmation-overlay.show .confirmation-modal { transform: scale(1); opacity: 1; }
+        .confirmation-modal h3 { font-size: 1.25rem; font-weight: 600; margin-top: 0; margin-bottom: 0.75rem; }
+        .confirmation-modal p { color: #6c757d; margin-bottom: 1.75rem; }
+        .confirmation-actions { display: flex; gap: 1rem; justify-content: center; }
+        .confirmation-actions button { border: none; padding: 0.75rem 1.5rem; border-radius: 8px; font-family: 'Inter', sans-serif; font-weight: 500; font-size: 1rem; cursor: pointer; transition: all 0.2s ease; }
+        .confirmation-btn-cancel { background-color: #e9ecef; color: #495057; }
+        .confirmation-btn-cancel:hover { background-color: #dee2e6; }
+        .confirmation-btn-confirm { background-color: #dc3545; color: white; }
+        .confirmation-btn-confirm:hover { background-color: #c82333; }
+
+        .mobile-header, .mobile-nav, .nav-overlay { display: none; }
+        @media (max-width: 992px) {
+            .dashboard-layout { grid-template-columns: 1fr; }
+            .dashboard-sidebar { display: none; }
+            .dashboard-main { padding: 1.5rem; padding-top: 80px; }
+            .dashboard-main h1 { font-size: 1.5rem; }
+            .sair{text-decoration: none;}
+            .mobile-header { display: flex; justify-content: space-between; align-items: center; padding: 0 1.5rem; height: 60px; background-color: var(--color-surface); border-bottom: 1px solid var(--color-border); position: fixed; top: 0; left: 0; width: 100%; z-index: 100; }
+            .mobile-header .logo-img { height: 35px; }
+            .menu-toggle { background: none; border: none; font-size: 1.5rem; color: var(--color-text); cursor: pointer; }
+            .mobile-nav { display: block; position: fixed; top: 0; left: -100%; width: 80%; max-width: 300px; height: 100vh; background-color: var(--color-surface); z-index: 110; transition: left 0.3s ease-in-out; padding: 1.5rem; display: flex; flex-direction: column; }
+            .mobile-nav.is-open { left: 0; box-shadow: 5px 0 15px rgba(0,0,0,0.1); }
+            .mobile-nav .sidebar-header { padding-bottom: 1rem; margin-bottom: 1rem; }
+            .mobile-nav-links { display: flex; flex-direction: column; gap: 0.75rem; }
+            .mobile-nav-links a { color: var(--color-text-muted); text-decoration: none; font-size: 1.1rem; font-weight: 500; padding: 1rem; border-radius: 8px; display: flex; align-items: center; gap: 1rem; }
+            .mobile-nav-links a:hover { background-color: var(--color-background); }
+            .mobile-nav-links a i { width: 20px; text-align: center; }
+            .mobile-logout { margin-top: auto; }
+            .nav-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 105; }
+            .nav-overlay.is-open { display: block; }
+        }
+        @media (max-width: 768px) {
+            .popup-container { width: 90%; max-width: 400px; top: 20px; left: 50%; right: auto; transform: translateX(-50%); }
+            .popup { min-width: 0; width: 100%; font-size: 0.9rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-layout">
+        <aside class="dashboard-sidebar">
+            <div class="sidebar-header"><a href="index.html"><img src="IMG/Loginho2.png" alt="Logo Ocean Coffee" class="logo-img"></a></div>
+            <div class="user-profile-summary">
+                <div class="avatar" id="avatar-inicial"></div>
+                <h3 id="welcome-message">Carregando...</h3>
+                <p id="user-email-sidebar"></p>
+            </div>
+            <nav class="sidebar-nav">
+                <div class="sidebar-nav-main">
+                    <a href="perfil.html"><i class="fas fa-user-circle"></i><span>Meu Perfil</span></a>
+                    <a href="meus-anuncios.html" class="active"><i class="fas fa-bullhorn"></i><span>Meus Anúncios</span></a>
+                    <a href="anuncie.html"><i class="fas fa-plus-circle"></i><span>Anunciar Novo</span></a>
+                </div>
+                <div class="sidebar-nav-logout"><a href="#" id="logout-btn"><i class="fas fa-sign-out-alt"></i><span>Sair</span></a></div>
+            </nav>
+        </aside>
+        
+        <main class="dashboard-main">
+            <header class="mobile-header">
+                <a href="index.html"><img src="IMG/Loginho2.png" alt="Logo Ocean Coffee" class="logo-img"></a>
+                <button class="menu-toggle" id="menu-toggle" aria-label="Abrir menu"><i class="fas fa-bars"></i></button>
+            </header>
+
+            <h1>Editar Anúncio</h1>
+            <div id="loading-message"><p>Carregando dados do anúncio...</p></div>
+            <form id="anuncioForm" style="display: none;">
+                <div class="form-section">
+                    <h3><i class="fas fa-images"></i> Imagens do Anúncio (Clique para alterar)</h3>
+                    <div class="image-upload-container">
+                        <label for="imagem1" class="image-upload-box"><input type="file" id="imagem1" data-preview-id="preview1" accept="image/*"><img src="" class="image-preview" id="preview1"><div class="upload-placeholder" id="placeholder1"><i class="fas fa-camera"></i><p>Imagem 1</p></div></label>
+                        <label for="imagem2" class="image-upload-box"><input type="file" id="imagem2" data-preview-id="preview2" accept="image/*"><img src="" class="image-preview" id="preview2"><div class="upload-placeholder" id="placeholder2"><i class="fas fa-plus"></i><p>Imagem 2</p></div></label>
+                        <label for="imagem3" class="image-upload-box"><input type="file" id="imagem3" data-preview-id="preview3" accept="image/*"><img src="" class="image-preview" id="preview3"><div class="upload-placeholder" id="placeholder3"><i class="fas fa-plus"></i><p>Imagem 3</p></div></label>
+                    </div>
+                </div>
+                <div class="form-section">
+                    <h3><i class="fas fa-info-circle"></i> Detalhes do Anúncio</h3>
+                    <div class="fields-grid">
+                        <div class="form-group full-width"><input type="text" id="produto" placeholder="Título do anúncio" required></div>
+                        <div class="form-group full-width"><textarea id="descricao" placeholder="Descreva seu produto em detalhes..." rows="5" required></textarea></div>
+                        <div class="form-group"><input type="text" id="preco" placeholder="Preço (R$)" required></div>
+                        <div class="form-group"><input type="text" id="local" placeholder="Cidade e Estado (Ex: Campinas, SP)" required></div>
+                        <div class="form-group"><input type="text" id="telefone" placeholder="Seu telefone de contato" required></div>
+                    </div>
+                    <div class="form-actions">
+                         <button type="submit" id="publicarBtn" class="publicar-btn">
+                            <i class="fas fa-save"></i> Salvar Alterações
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </main>
+    </div>
+
+    <div class="nav-overlay" id="nav-overlay"></div>
+    <nav class="mobile-nav" id="mobile-nav">
+        <div class="sidebar-header"><h3 id="mobile-welcome-message">Olá!</h3></div>
+        <div class="mobile-nav-links">
+            <a href="perfil.html"><i class="fas fa-user-circle"></i><span>Meu Perfil</span></a>
+            <a href="meus-anuncios.html"><i class="fas fa-bullhorn"></i><span>Meus Anúncios</span></a>
+            <a href="anuncie.html"><i class="fas fa-plus-circle"></i><span>Anunciar Novo</span></a>
+        </div>
+        <div class="mobile-logout">
+             <a href="#" id="mobile-logout-btn" class="sair"><i class="fas fa-sign-out-alt"></i><span style="margin-left: 1rem;">Sair</span></a>
+        </div>
+    </nav>
+    
+    <script type="module">
+        import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.44.1/+esm";
+        
+        const supabaseUrl = "https://uldxazlnnpuoxfzsovmu.supabase.co";
+        const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVsZHhhemxubnB1b3hmenNvdm11Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg3Mjg2NzgsImV4cCI6MjA2NDMwNDY3OH0.fyToys8_muc1XyUebJ19gxGEkCVM_cXg80UJR894xQY";
+        const supabase = createClient(supabaseUrl, supabaseKey);
+
+        function ensurePopupContainer() { let c = document.getElementById('popup-container'); if (!c) { c = document.createElement('div'); c.id = 'popup-container'; c.className = 'popup-container'; document.body.appendChild(c); } return c; }
+        function showPopup(message, type = 'info', duration = 3500) { const c = ensurePopupContainer(); const p = document.createElement('div'); p.className = `popup ${type}`; let i = 'fas fa-info-circle'; if (type === 'success') i = 'fas fa-check-circle'; if (type === 'error') i = 'fas fa-times-circle'; p.innerHTML = `<i class="${i}"></i> <div>${message}</div>`; c.prepend(p); requestAnimationFrame(() => p.classList.add('show')); setTimeout(() => { p.classList.remove('show'); p.addEventListener('transitionend', () => p.remove()); }, duration); }
+        function showConfirmationPopup(title, message, options = {}) { const { confirmText = 'Sim, Sair', cancelText = 'Cancelar' } = options; return new Promise((resolve) => { const o = document.createElement('div'); o.className = 'confirmation-overlay'; o.innerHTML = `<div class="confirmation-modal"><h3>${title}</h3><p>${message}</p><div class="confirmation-actions"><button class="confirmation-btn-cancel">${cancelText}</button><button class="confirmation-btn-confirm">${confirmText}</button></div></div>`; const c = (r) => { o.classList.remove('show'); o.addEventListener('transitionend', () => { o.remove(); resolve(r); }); }; o.querySelector('.confirmation-btn-cancel').addEventListener('click', () => c(false)); o.querySelector('.confirmation-btn-confirm').addEventListener('click', () => c(true)); document.body.appendChild(o); requestAnimationFrame(() => o.classList.add('show')); }); }
+
+
+        document.addEventListener("DOMContentLoaded", async () => {
+            const form = document.getElementById('anuncioForm');
+            const loadingMessage = document.getElementById('loading-message');
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) { window.location.replace('Login.html'); return; }
+
+            const { data: profile } = await supabase.from("usuarios").select("nome, email").eq("user_id", user.id).single();
+            if (profile) {
+                const firstName = profile.nome.split(' ')[0];
+                document.getElementById('welcome-message').textContent = firstName;
+                document.getElementById('mobile-welcome-message').textContent = `Olá, ${firstName}!`;
+                document.getElementById('user-email-sidebar').textContent = profile.email;
+                document.getElementById('avatar-inicial').textContent = profile.nome.charAt(0).toUpperCase();
+            }
+
+            const precoInput = document.getElementById('preco');
+            const telefoneInput = document.getElementById('telefone');
+
+            // --- LÓGICA DE FORMATAÇÃO DE PREÇO (ESTILO BANCO) ---
+            precoInput.addEventListener('input', (e) => {
+                let value = e.target.value.replace(/\D/g, '');
+                value = (parseInt(value, 10) / 100).toLocaleString('pt-BR', {
+                    style: 'currency',
+                    currency: 'BRL'
+                });
+                e.target.value = value;
+            });
+             precoInput.addEventListener('focus', (e) => {
+                if (!e.target.value || parseFloat(e.target.value.replace(/\D/g, '')/100) === 0) {
+                    e.target.value = 'R$ 0,00';
+                }
+            });
+
+            const telefoneMask = IMask(telefoneInput, { mask: [ { mask: '(00) 0000-0000' }, { mask: '(00) 00000-0000' } ] });
+
+            const params = new URLSearchParams(window.location.search);
+            const anuncioId = params.get('id');
+            if (!anuncioId) {
+                loadingMessage.textContent = "Erro: ID do anúncio não encontrado.";
+                return;
+            }
+
+            const { data: anuncio, error } = await supabase.from('produtos').select('*').eq('id', anuncioId).single();
+            if (error || !anuncio) {
+                loadingMessage.textContent = "Erro ao carregar o anúncio.";
+                return;
+            }
+
+            document.getElementById('produto').value = anuncio.produto;
+            document.getElementById('descricao').value = anuncio.descricao;
+            precoInput.value = (anuncio.preco || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            document.getElementById('local').value = anuncio.local;
+            telefoneMask.value = anuncio.contato;
+            
+            const previews = [document.getElementById('preview1'), document.getElementById('preview2'), document.getElementById('preview3')];
+            const placeholders = [document.getElementById('placeholder1'), document.getElementById('placeholder2'), document.getElementById('placeholder3')];
+            previews.forEach((img, index) => {
+                if(anuncio.imagens && anuncio.imagens[index]) {
+                    img.src = anuncio.imagens[index];
+                    placeholders[index].style.display = 'none';
+                } else {
+                    img.src = '';
+                    placeholders[index].style.display = 'flex';
+                }
+            });
+
+            loadingMessage.style.display = 'none';
+            form.style.display = 'flex';
+
+            document.querySelectorAll('input[type="file"]').forEach(input => {
+                input.addEventListener('change', function(event) {
+                    const file = event.target.files[0];
+                    if (!file) return;
+                    const previewElement = document.getElementById(this.dataset.previewId);
+                    const placeholderElement = document.getElementById(this.dataset.previewId.replace('preview', 'placeholder'));
+                    const reader = new FileReader();
+                    reader.onload = e => { 
+                        previewElement.src = e.target.result; 
+                        placeholderElement.style.display = 'none';
+                    };
+                    reader.readAsDataURL(file);
+                });
+            });
+
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const btn = document.getElementById('publicarBtn');
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
+
+                try {
+                    const fileInputs = [document.getElementById('imagem1'), document.getElementById('imagem2'), document.getElementById('imagem3')];
+                    const newImageUrls = [...(anuncio.imagens || [])]; 
+                    let uploadTasks = [];
+
+                    fileInputs.forEach((input, index) => {
+                        if (input.files.length > 0) {
+                            const file = input.files[0];
+                            const path = `produtos/${user.id}/${Date.now()}_${file.name}`;
+                            uploadTasks.push(
+                                supabase.storage.from('imagens').upload(path, file).then(({ data, error }) => {
+                                    if (error) throw error;
+                                    newImageUrls[index] = supabase.storage.from('imagens').getPublicUrl(data.path).data.publicUrl;
+                                })
+                            );
+                        }
+                    });
+
+                    await Promise.all(uploadTasks);
+
+                    // --- ESTE É O BLOCO MODIFICADO ---
+                    const updatedData = {
+                        produto: document.getElementById('produto').value,
+                        descricao: document.getElementById('descricao').value,
+                        preco: parseFloat(precoInput.value.replace('R$', '').replace(/\./g, '').replace(',', '.')),
+                        local: document.getElementById('local').value,
+                        contato: telefoneMask.unmaskedValue,
+                        imagens: newImageUrls.filter(Boolean),
+                        
+                        // Campos para re-submissão
+                        aprovado: null,          // Define como pendente
+                        motivo_rejeicao: null, // Limpa o motivo da rejeição anterior
+                        rejeicao_vista: null,  // Limpa o status de visualização
+                        data: new Date().toISOString() // Atualiza a data de envio
+                    };
+                    // --- FIM DO BLOCO MODIFICADO ---
+
+                    const { error: updateError } = await supabase.from('produtos').update(updatedData).eq('id', anuncioId);
+                    if (updateError) throw updateError;
+                    
+                    showPopup('Anúncio atualizado e enviado para análise!', 'success');
+                    setTimeout(() => {
+                        window.location.href = 'meus-anuncios.html';
+                    }, 2000);
+
+                } catch (error) {
+                    showPopup(`Erro ao salvar: ${error.message}`, 'error');
+                } finally {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-save"></i> Salvar Alterações';
+                }
+            });
+
+            async function handleLogout(e) { 
+                e.preventDefault(); 
+                const confirmed = await showConfirmationPopup('Confirmar Saída', 'Você tem certeza que deseja sair da sua conta?', { confirmText: 'Sim, Sair' });
+                if (confirmed) {
+                    showPopup("Saindo...", 'info', 1500);
+                    await supabase.auth.signOut();
+                    setTimeout(() => window.location.replace("index.html"), 500);
+                }
+            }
+            document.getElementById('logout-btn').addEventListener('click', handleLogout);
+            document.getElementById('mobile-logout-btn').addEventListener('click', handleLogout);
+            
+            const menuToggle = document.getElementById('menu-toggle'), mobileNav = document.getElementById('mobile-nav'), navOverlay = document.getElementById('nav-overlay');
+            function closeMenu() { mobileNav.classList.remove('is-open'); navOverlay.classList.remove('is-open'); }
+            menuToggle.addEventListener('click', () => { mobileNav.classList.add('is-open'); navOverlay.classList.add('is-open'); });
+            navOverlay.addEventListener('click', closeMenu);
+        });
+    </script>
+</body>
+</html>
