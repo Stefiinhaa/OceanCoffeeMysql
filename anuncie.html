@@ -196,6 +196,17 @@
         </div>
     </nav>
 
+    <div class="confirmation-overlay" id="logout-modal">
+        <div class="confirmation-modal">
+            <h3>Sair da Conta</h3>
+            <p>Tem certeza que deseja sair do seu painel?</p>
+            <div class="confirmation-actions">
+                <button class="confirmation-btn-cancel" id="btn-cancel-logout">Cancelar</button>
+                <button class="confirmation-btn-confirm" id="btn-confirm-logout">Sair</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         function protegerPagina() {
             const usuarioStr = localStorage.getItem("usuarioLogado");
@@ -216,7 +227,59 @@
                 document.getElementById('user-email-sidebar').textContent = user.email;
                 document.getElementById('avatar-inicial').textContent = user.nome.charAt(0).toUpperCase();
             }
+
+            // --- LÓGICA DO MENU HAMBÚRGUER ---
+            const menuToggle = document.getElementById('menu-toggle');
+            const mobileNav = document.getElementById('mobile-nav');
+            const navOverlay = document.getElementById('nav-overlay');
+
+            function closeMenu() {
+                if(mobileNav) mobileNav.classList.remove('is-open');
+                if(navOverlay) navOverlay.classList.remove('is-open');
+            }
+
+            if(menuToggle && mobileNav) {
+                menuToggle.addEventListener('click', () => {
+                    mobileNav.classList.toggle('is-open');
+                    if(navOverlay) navOverlay.classList.toggle('is-open');
+                });
+            }
             
+            if(navOverlay) {
+                navOverlay.addEventListener('click', closeMenu);
+            }
+            
+            // --- LÓGICA DO POP-UP DE SAÍDA (LOGOUT) ---
+            const logoutModal = document.getElementById('logout-modal');
+            const btnCancelLogout = document.getElementById('btn-cancel-logout');
+            const btnConfirmLogout = document.getElementById('btn-confirm-logout');
+
+            const handleLogout = (e) => {
+                e.preventDefault(); 
+                closeMenu(); // Fecha o menu mobile se estiver aberto
+                logoutModal.classList.add('show');
+            };
+
+            if (btnCancelLogout) {
+                btnCancelLogout.addEventListener('click', () => {
+                    logoutModal.classList.remove('show');
+                });
+            }
+
+            if (btnConfirmLogout) {
+                btnConfirmLogout.addEventListener('click', () => {
+                    localStorage.removeItem("usuarioLogado");
+                    window.location.replace("index.html");
+                });
+            }
+
+            const logoutBtnDesk = document.getElementById('logout-btn');
+            const logoutBtnMob = document.getElementById('mobile-logout-btn');
+            if(logoutBtnDesk) logoutBtnDesk.addEventListener('click', handleLogout);
+            if(logoutBtnMob) logoutBtnMob.addEventListener('click', handleLogout);
+
+            
+            // --- LÓGICA DO FORMULÁRIO E IMAGENS ---
             const form = document.getElementById('anuncioForm');
             const precoInput = document.getElementById('preco');
             const telefoneInput = document.getElementById('telefone');
@@ -261,10 +324,12 @@
 
                     if (!titulo || !local || !descricao || !contato) throw new Error("Preencha todos os campos obrigatórios.");
                     
-                    const preview1 = document.getElementById('preview1').src;
-                    if (!preview1 || preview1 === window.location.href) throw new Error("Selecione pelo menos a Imagem Principal.");
+                    const file1 = document.getElementById('imagem1').files[0];
+                    const file2 = document.getElementById('imagem2').files[0];
+                    const file3 = document.getElementById('imagem3').files[0];
 
-                    // Prepara os dados (FormData) para enviar ao salvar_anuncio.php
+                    if (!file1) throw new Error("Selecione pelo menos a Imagem Principal.");
+
                     const formData = new FormData();
                     formData.append('usuario_id', user.id);
                     formData.append('titulo', titulo);
@@ -273,14 +338,6 @@
                     formData.append('local', local);
                     formData.append('contato', contato);
                     
-                    // Só envia as imagens se elas tiverem sido preenchidas (em Base64)
-                    // Envia os arquivos REAIS da imagem
-                    const file1 = document.getElementById('imagem1').files[0];
-                    const file2 = document.getElementById('imagem2').files[0];
-                    const file3 = document.getElementById('imagem3').files[0];
-
-                    if (!file1) throw new Error("Selecione pelo menos a Imagem Principal.");
-
                     if (file1) formData.append('imagem_0', file1);
                     if (file2) formData.append('imagem_1', file2);
                     if (file3) formData.append('imagem_2', file3);
@@ -306,17 +363,6 @@
                     btn.innerHTML = '<i class="fas fa-paper-plane"></i> Enviar para Análise';
                 }
             });
-
-            // Logout
-            const handleLogout = (e) => {
-                e.preventDefault(); 
-                if(confirm('Tem certeza que deseja sair?')) {
-                    localStorage.removeItem("usuarioLogado");
-                    window.location.replace("index.html");
-                }
-            };
-            document.getElementById('logout-btn').addEventListener('click', handleLogout);
-            document.getElementById('mobile-logout-btn').addEventListener('click', handleLogout);
         });
     </script>
 </body>
