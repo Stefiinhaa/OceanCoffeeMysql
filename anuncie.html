@@ -274,10 +274,17 @@
                     formData.append('contato', contato);
                     
                     // Só envia as imagens se elas tiverem sido preenchidas (em Base64)
-                    if(document.getElementById('preview1').src && document.getElementById('preview1').src !== window.location.href) formData.append('imagem_0', document.getElementById('preview1').src);
-                    if(document.getElementById('preview2').src && document.getElementById('preview2').src !== window.location.href) formData.append('imagem_1', document.getElementById('preview2').src);
-                    if(document.getElementById('preview3').src && document.getElementById('preview3').src !== window.location.href) formData.append('imagem_2', document.getElementById('preview3').src);
+                    // Envia os arquivos REAIS da imagem
+                    const file1 = document.getElementById('imagem1').files[0];
+                    const file2 = document.getElementById('imagem2').files[0];
+                    const file3 = document.getElementById('imagem3').files[0];
 
+                    if (!file1) throw new Error("Selecione pelo menos a Imagem Principal.");
+
+                    if (file1) formData.append('imagem_0', file1);
+                    if (file2) formData.append('imagem_1', file2);
+                    if (file3) formData.append('imagem_2', file3);
+                    
                     const response = await fetch('salvar_anuncio.php', {
                         method: 'POST',
                         body: formData
