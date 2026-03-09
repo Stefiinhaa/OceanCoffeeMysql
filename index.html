@@ -370,32 +370,30 @@
     }
 
     document.addEventListener('DOMContentLoaded', async () => {
-        // 2. Lógica do Menu Hambúrguer Responsivo
+        // 2. Lógica do Menu Hambúrguer Responsivo (Corrigido para 'is-open')
         const menuToggle = document.getElementById('menu-toggle');
         const mobileNav = document.getElementById('mobile-nav');
         const navOverlay = document.getElementById('nav-overlay');
 
+        function closeMenu() {
+            if(mobileNav) mobileNav.classList.remove('is-open');
+            if(navOverlay) navOverlay.classList.remove('is-open');
+        }
+
         if(menuToggle && mobileNav) {
             menuToggle.addEventListener('click', () => {
-                mobileNav.classList.toggle('active');
-                if(navOverlay) navOverlay.classList.toggle('active');
+                mobileNav.classList.toggle('is-open');
+                if(navOverlay) navOverlay.classList.toggle('is-open');
             });
         }
         
         if(navOverlay) {
-            navOverlay.addEventListener('click', () => {
-                mobileNav.classList.remove('active');
-                navOverlay.classList.remove('active');
-            });
+            navOverlay.addEventListener('click', closeMenu);
         }
 
-        // Fechar o menu ao clicar em qualquer link
         if(mobileNav) {
             mobileNav.querySelectorAll('a').forEach(link => {
-                link.addEventListener('click', () => {
-                    mobileNav.classList.remove('active');
-                    if(navOverlay) navOverlay.classList.remove('active');
-                });
+                link.addEventListener('click', closeMenu);
             });
         }
 
