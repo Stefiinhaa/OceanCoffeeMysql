@@ -444,367 +444,365 @@
         <div id="fullscreen-counter" class="fullscreen-counter"></div>
     </div>
 
-<script type="module">
-    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.44.1/+esm";
-    // 1. Importa a NOSSA NOVA função de layout
-    import { initAdminPage } from './JS/admin-layout.js';
-
-    // 2. Informa ao script de layout qual é a página atual
-    initAdminPage({
-        name: "Aprovados",
-        icon: "fas fa-check-circle"
-    });
+    <script type="module">
+        // Importa a função de layout local
+        import { initAdminPage } from './JS/admin-layout.js';
     
-    // --- Início da lógica específica da página Aprovados.html ---
-
-    const supabaseUrl = "https://uldxazlnnpuoxfzsovmu.supabase.co";
-    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVsZHhhemxubnB1b3hmenNvdm11Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg3Mjg2NzgsImV4cCI6MjA2NDMwNDY3OH0.fyToys8_muc1XyUebJ19gxGEkCVM_cXg80UJR894xQY";
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    // --- Variáveis Globais ---
-    let todosAprovados = [];
-    let aprovadosFiltrados = [];
-    let currentPage = 1;
-    const rowsPerPage = 10;
-    let imagensCarrosselAtual = [];
-    let carrosselAtualIndex = 0;
-    let fullscreenIndex = 0;
-
-    // --- Elementos DOM Globais ---
-    const detalhesModalEl = document.getElementById('detalhes-modal');
-    const fullscreenModalEl = document.getElementById('fullscreen-modal');
-    const tbodyEl = document.getElementById("aprovados-tbody");
-    const paginationContainerEl = document.getElementById("pagination-container");
-    const searchInputEl = document.getElementById("searchInput");
-    const headerTitleEl = document.getElementById('headerTitle');
-
-    // --- Funções Utilitárias ---
-    function showToast(message, type = 'success') {
-        const toast = document.createElement('div');
-        toast.className = `toast-notification ${type}`;
-        toast.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-times-circle'}"></i><span>${message}</span>`;
-        document.body.appendChild(toast);
-        setTimeout(() => {
-            toast.classList.add('fade-out');
-            toast.addEventListener('animationend', () => toast.remove());
-        }, 3000);
-     }
-     
-     // ***** FUNÇÃO DE POPUP RESTAURADA *****
-    function showConfirmationPopup(message) {
-         return new Promise((resolve) => {
-            const overlay = document.createElement('div');
-            // Usando as classes do admin.html para consistência
-            overlay.className = 'popup-overlay'; 
-            overlay.innerHTML = `
-                <div class="popup-content">
-                    <i class="popup-icon fas fa-exclamation-triangle confirm"></i>
-                    <h3>${message}</h3>
-                    <div class="popup-buttons">
-                        <button class="btn-cancel">Cancelar</button>
-                        <button class="btn-confirm">Sim, Excluir</button>
-                    </div>
-                </div>`;
-            document.body.appendChild(overlay);
-            setTimeout(() => overlay.classList.add('visible'), 10);
-            
-            const closePopup = (value) => {
-                overlay.classList.remove('visible');
-                overlay.addEventListener('transitionend', () => { overlay.remove(); resolve(value); });
+        // Informa ao script de layout qual é a página atual
+        initAdminPage({
+            name: "Aprovados",
+            icon: "fas fa-check-circle"
+        });
+        
+        // --- Variáveis Globais ---
+        let todosAprovados = [];
+        let aprovadosFiltrados = [];
+        let currentPage = 1;
+        const rowsPerPage = 10;
+        let imagensCarrosselAtual = [];
+        let carrosselAtualIndex = 0;
+        let fullscreenIndex = 0;
+    
+        // --- Elementos DOM Globais ---
+        const detalhesModalEl = document.getElementById('detalhes-modal');
+        const fullscreenModalEl = document.getElementById('fullscreen-modal');
+        const tbodyEl = document.getElementById("aprovados-tbody");
+        const paginationContainerEl = document.getElementById("pagination-container");
+        const searchInputEl = document.getElementById("searchInput");
+        const headerTitleEl = document.getElementById('headerTitle');
+    
+        // --- Funções Utilitárias ---
+        function showToast(message, type = 'success') {
+            const toast = document.createElement('div');
+            toast.className = `toast-notification ${type}`;
+            toast.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-times-circle'}"></i><span>${message}</span>`;
+            document.body.appendChild(toast);
+            setTimeout(() => {
+                toast.classList.add('fade-out');
+                toast.addEventListener('animationend', () => toast.remove());
+            }, 3000);
+         }
+         
+        function showConfirmationPopup(message) {
+             return new Promise((resolve) => {
+                const overlay = document.createElement('div');
+                overlay.className = 'popup-overlay'; 
+                overlay.innerHTML = `
+                    <div class="popup-content">
+                        <i class="popup-icon fas fa-exclamation-triangle confirm"></i>
+                        <h3>${message}</h3>
+                        <div class="popup-buttons">
+                            <button class="btn-cancel">Cancelar</button>
+                            <button class="btn-confirm">Sim, Excluir</button>
+                        </div>
+                    </div>`;
+                document.body.appendChild(overlay);
+                setTimeout(() => overlay.classList.add('visible'), 10);
+                
+                const closePopup = (value) => {
+                    overlay.classList.remove('visible');
+                    overlay.addEventListener('transitionend', () => { overlay.remove(); resolve(value); });
+                };
+                
+                overlay.querySelector('.btn-confirm').addEventListener('click', () => closePopup(true));
+                overlay.querySelector('.btn-cancel').addEventListener('click', () => closePopup(false));
+            });
+        }
+    
+        // --- Funções Principais ---
+        async function carregarAprovados() {
+            if (!tbodyEl) return;
+            tbodyEl.innerHTML = `<tr><td colspan="5">Carregando anúncios aprovados...</td></tr>`;
+            try {
+                // Pede os dados dos anúncios aprovados ao PHP
+                const response = await fetch('admin_listar_aprovados.php');
+                const data = await response.json();
+    
+                if (!data.status) throw new Error(data.mensagem);
+                
+                todosAprovados = data.aprovados || [];
+                aprovadosFiltrados = todosAprovados;
+                currentPage = 1;
+                
+                 if (headerTitleEl) {
+                    headerTitleEl.textContent = `Anúncios Aprovados (${todosAprovados.length})`;
+                 }
+                displayPage();
+            } catch (error) {
+                console.error("Erro ao carregar anúncios aprovados:", error.message);
+                showToast("Erro ao carregar anúncios", "error");
+                if (tbodyEl) tbodyEl.innerHTML = `<tr><td colspan="5">Erro ao carregar dados.</td></tr>`;
+            }
+        }
+    
+        function displayPage() {
+            renderizarTabela(aprovadosFiltrados);
+            setupPagination(aprovadosFiltrados);
+        }
+    
+        function renderizarTabela(anuncios) {
+            if (!tbodyEl) return;
+            tbodyEl.innerHTML = "";
+    
+            const startIndex = (currentPage - 1) * rowsPerPage;
+            const paginatedItems = anuncios.slice(startIndex, startIndex + rowsPerPage);
+    
+            if (paginatedItems.length === 0) {
+                tbodyEl.innerHTML = `<tr><td colspan="5">Nenhum anúncio aprovado encontrado.</td></tr>`;
+                return;
+            }
+    
+            paginatedItems.forEach((produto, index) => {
+                const tr = document.createElement("tr");
+                tr.setAttribute('data-id', produto.id);
+                const itemIndex = startIndex + index + 1;
+                
+                // Lida com a data vinda do MySQL
+                const dataString = produto.data_criacao || produto.data || new Date().toISOString();
+                const dataUTC = new Date(dataString.includes('Z') ? dataString : dataString + "Z");
+                
+                tr.innerHTML = `
+                    <td>${itemIndex}</td>
+                    <td>${produto.nome_usuario || "Não Informado"}</td>
+                    <td>${produto.titulo || "-"}</td>
+                    <td>${dataUTC.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}</td>
+                    <td>
+                        <button class="btn-detalhes">Ver</button>
+                    </td> `;
+                 
+                 tr.querySelector('.btn-detalhes').addEventListener('click', () => abrirModalDetalhes(produto.id));
+                tbodyEl.appendChild(tr);
+            });
+        }
+    
+        function setupPagination(anuncios) {
+            if (!paginationContainerEl) return;
+            paginationContainerEl.innerHTML = "";
+            const pageCount = Math.ceil(anuncios.length / rowsPerPage);
+            if (pageCount <= 1) return;
+    
+            const pageInfo = document.createElement('div');
+            pageInfo.className = 'pagination-info';
+            pageInfo.textContent = `Mostrando ${Math.min((currentPage - 1) * rowsPerPage + 1, anuncios.length)} a ${Math.min(currentPage * rowsPerPage, anuncios.length)} de ${anuncios.length} anúncios`;
+    
+            const controls = document.createElement('div');
+            controls.className = 'pagination-controls';
+    
+            const createButton = (text, page, isDisabled = false, isActive = false) => {
+                const button = document.createElement('button');
+                button.innerHTML = text;
+                button.disabled = isDisabled;
+                if (isActive) button.classList.add('active');
+                if (page) {
+                    button.addEventListener('click', () => {
+                        currentPage = page;
+                        displayPage();
+                    });
+                }
+                return button;
             };
+            const createEllipsis = () => {
+                const span = document.createElement('span');
+                span.className = 'ellipsis';
+                span.textContent = '...';
+                return span;
+            };
+    
+            controls.appendChild(createButton('&laquo; Anterior', currentPage - 1, currentPage === 1));
+    
+            const maxVisibleButtons = 5;
+            let startPage, endPage;
+            if (pageCount <= maxVisibleButtons) {
+                startPage = 1; endPage = pageCount;
+            } else {
+                const maxPagesShown = maxVisibleButtons - 2;
+                let maxPagesBeforeCurrent = Math.floor(maxPagesShown / 2);
+                let maxPagesAfterCurrent = Math.ceil(maxPagesShown / 2) - 1;
+                if (currentPage <= maxPagesBeforeCurrent) {
+                    startPage = 1; endPage = maxPagesShown;
+                } else if (currentPage + maxPagesAfterCurrent >= pageCount) {
+                    startPage = pageCount - maxPagesShown + 1; endPage = pageCount;
+                } else {
+                    startPage = currentPage - maxPagesBeforeCurrent; endPage = currentPage + maxPagesAfterCurrent;
+                }
+            }
+            if (startPage > 1) {
+                controls.appendChild(createButton('1', 1));
+                if (startPage > 2) controls.appendChild(createEllipsis());
+            }
+            for (let i = startPage; i <= endPage; i++) {
+                controls.appendChild(createButton(i, i, false, i === currentPage));
+            }
+            if (endPage < pageCount) {
+                if (endPage < pageCount - 1) controls.appendChild(createEllipsis());
+                controls.appendChild(createButton(pageCount, pageCount));
+            }
+            controls.appendChild(createButton('Próximo &raquo;', currentPage + 1, currentPage === pageCount));
+    
+            paginationContainerEl.appendChild(pageInfo);
+            paginationContainerEl.appendChild(controls);
+        }
+    
+        window.abrirModalDetalhes = (id) => { 
+            if (!detalhesModalEl) return;
+            const produto = todosAprovados.find(p => p.id == id);
+            if (!produto) return;
             
-            overlay.querySelector('.btn-confirm').addEventListener('click', () => closePopup(true));
-            overlay.querySelector('.btn-cancel').addEventListener('click', () => closePopup(false));
-        });
-    }
-
-    // --- Funções Principais ---
-    async function carregarAprovados() {
-        if (!tbodyEl) return;
-        tbodyEl.innerHTML = `<tr><td colspan="5">Carregando anúncios aprovados...</td></tr>`;
-        try {
-            const { data, error, count } = await supabase.from("aprovados")
-                .select("*", { count: 'exact' })
-                .order("data_aprovacao", { ascending: false, nullsFirst: false }); // Garante que nulos não venham primeiro
-
-            if (error) throw error;
+            document.getElementById('modal-descricao').textContent = produto.descricao || 'Não informado.';
             
-            // Fallback para 'created_at' caso 'data_aprovacao' seja nulo
-            todosAprovados = data.map(anuncio => ({
-                ...anuncio,
-                data_aprovacao: anuncio.data_aprovacao || anuncio.created_at
-            })) || [];
+            const dataString = produto.data_criacao || produto.data || new Date().toISOString();
+            const dataUTC = new Date(dataString.includes('Z') ? dataString : dataString + "Z");
+            document.getElementById('modal-data').textContent = dataUTC.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
             
-            aprovadosFiltrados = todosAprovados;
-            currentPage = 1;
-             if (headerTitleEl) {
-                headerTitleEl.textContent = `Anúncios Aprovados (${count || 0})`;
+            document.getElementById('modal-local').textContent = produto.local || 'Não informado.';
+            document.getElementById('modal-contato').textContent = produto.contato || 'Não informado.';
+            document.getElementById('modal-preco').textContent = parseFloat(produto.preco).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    
+            const carrosselContainer = document.getElementById('modal-carrossel');
+            
+            // Agrupa as imagens vindas do MySQL
+            imagensCarrosselAtual = [];
+            if(produto.imagem_0 && produto.imagem_0.trim() !== '') imagensCarrosselAtual.push(produto.imagem_0);
+            if(produto.imagem_1 && produto.imagem_1.trim() !== '') imagensCarrosselAtual.push(produto.imagem_1);
+            if(produto.imagem_2 && produto.imagem_2.trim() !== '') imagensCarrosselAtual.push(produto.imagem_2);
+            
+            carrosselAtualIndex = 0;
+            if (imagensCarrosselAtual.length > 0) {
+                carrosselContainer.innerHTML = `<img id="carrossel-img-modal" src="${imagensCarrosselAtual[0]}" alt="Imagem do produto" onclick="abrirModalFullscreen(0)"><button class="carrossel-btn prev" onclick="mudarImagemModal(event, -1)">&#10094;</button><button class="carrossel-btn next" onclick="mudarImagemModal(event, 1)">&#10095;</button>`;
+            } else {
+                carrosselContainer.innerHTML = `<div class="carrossel-sem-imagem">Sem Imagens</div>`;
+            }
+            
+            const acoesContainer = document.getElementById('modal-acoes');
+            acoesContainer.innerHTML = `<button class="excluir">Excluir Anúncio</button>`;
+            acoesContainer.querySelector('.excluir').addEventListener('click', () => {
+                fecharModalDetalhes(); 
+                excluirAnuncio(produto.id, produto.titulo); 
+            });
+    
+            detalhesModalEl.classList.add('visible');
+        };
+        
+        window.fecharModalDetalhes = () => { if (detalhesModalEl) detalhesModalEl.classList.remove('visible'); }; 
+    
+        window.mudarImagemModal=(e,t)=>{
+            e.stopPropagation();
+            carrosselAtualIndex=(carrosselAtualIndex+t+imagensCarrosselAtual.length)%imagensCarrosselAtual.length;
+            const imgElement = document.getElementById("carrossel-img-modal");
+            imgElement.src=imagensCarrosselAtual[carrosselAtualIndex];
+            imgElement.setAttribute("onclick",`abrirModalFullscreen(${carrosselAtualIndex})`);
+         };
+         
+        window.abrirModalFullscreen = (index) => {
+            event && event.stopPropagation();
+            if(!imagensCarrosselAtual || imagensCarrosselAtual.length === 0 || !fullscreenModalEl) return;
+            fullscreenIndex = index;
+            atualizarImagemFullscreen();
+            fullscreenModalEl.classList.add("visible");
+         };
+         
+        window.fecharModalFullscreen = () => {
+            event && event.stopPropagation();
+            if (fullscreenModalEl) fullscreenModalEl.classList.remove("visible");
+         };
+         
+        window.mudarImagemFullscreen = (direction) => {
+             event && event.stopPropagation();
+            fullscreenIndex = (fullscreenIndex + direction + imagensCarrosselAtual.length) % imagensCarrosselAtual.length;
+            atualizarImagemFullscreen();
+         };
+         
+        function atualizarImagemFullscreen(){
+            if(!imagensCarrosselAtual || imagensCarrosselAtual.length === 0 || !fullscreenModalEl) return;
+            document.getElementById("fullscreen-image").src=imagensCarrosselAtual[fullscreenIndex];
+            document.getElementById("fullscreen-counter").textContent=`${fullscreenIndex+1} / ${imagensCarrosselAtual.length}`;
+        }
+    
+        // --- Funções de Ação ---
+         async function excluirAnuncio(id, nomeProduto) {
+             const confirmed = await showConfirmationPopup(`Deseja realmente excluir o anúncio "${nomeProduto}"?`);
+             if (!confirmed) return;
+             
+             try {
+                // Reutiliza o ficheiro de exclusão de anúncios que já criámos!
+                const response = await fetch('excluir_anuncio.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: id })
+                });
+                const data = await response.json();
+                
+                if (!data.status) throw new Error(data.mensagem);
+                
+                showToast(`Anúncio excluído com sucesso!`, 'success');
+                
+                todosAprovados = todosAprovados.filter(anuncio => anuncio.id !== id);
+                aprovadosFiltrados = aprovadosFiltrados.filter(anuncio => anuncio.id !== id);
+                
+                const totalPages = Math.ceil(aprovadosFiltrados.length / rowsPerPage);
+                if (currentPage > totalPages && totalPages > 0) {
+                    currentPage = totalPages;
+                }
+                
+                displayPage(); 
+                
+             } catch (error) {
+                showToast(`Erro ao excluir: ${error.message}`, 'error');
+                console.error('Erro ao excluir:', error);
              }
-            displayPage();
-        } catch (error) {
-            console.error("Erro ao carregar anúncios aprovados:", error.message);
-            showToast("Erro ao carregar anúncios", "error");
-            if (tbodyEl) tbodyEl.innerHTML = `<tr><td colspan="5">Erro ao carregar dados.</td></tr>`;
-        }
-    }
-
-    function displayPage() {
-        renderizarTabela(aprovadosFiltrados);
-        setupPagination(aprovadosFiltrados);
-    }
-
-    // ***** RENDERIZAR TABELA RESTAURADO *****
-    function renderizarTabela(anuncios) {
-        if (!tbodyEl) return;
-        tbodyEl.innerHTML = "";
-
-        const startIndex = (currentPage - 1) * rowsPerPage;
-        const paginatedItems = anuncios.slice(startIndex, startIndex + rowsPerPage);
-
-        if (paginatedItems.length === 0) {
-            tbodyEl.innerHTML = `<tr><td colspan="5">Nenhum anúncio aprovado encontrado.</td></tr>`;
-            return;
-        }
-
-        paginatedItems.forEach((produto, index) => {
-            const tr = document.createElement("tr");
-            tr.setAttribute('data-id', produto.id);
-            const itemIndex = startIndex + index + 1;
-            
-            // Força a data (data_aprovacao ou created_at) a ser lida como UTC, adicionando "Z"
-            const dataUTC = new Date((produto.data_aprovacao || produto.created_at) + "Z");
-            
-            tr.innerHTML = `
-                <td>${itemIndex}</td>
-                <td>${produto.nome_usuario || "Não Informado"}</td>
-                <td>${produto.produto || "-"}</td>
-                <td>${dataUTC.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}</td>
-                <td>
-                    <button class="btn-detalhes">Ver</button>
-                </td> `;
-             
-             // Adiciona listeners aos botões
-             tr.querySelector('.btn-detalhes').addEventListener('click', () => abrirModalDetalhes(produto.id));
-             
-            tbodyEl.appendChild(tr);
-        });
-    }
-
-    function setupPagination(anuncios) {
-        if (!paginationContainerEl) return;
-        paginationContainerEl.innerHTML = "";
-        const pageCount = Math.ceil(anuncios.length / rowsPerPage);
-        if (pageCount <= 1) return;
-
-        const pageInfo = document.createElement('div');
-        pageInfo.className = 'pagination-info';
-        pageInfo.textContent = `Mostrando ${Math.min((currentPage - 1) * rowsPerPage + 1, anuncios.length)} a ${Math.min(currentPage * rowsPerPage, anuncios.length)} de ${anuncios.length} anúncios`;
-
-        const controls = document.createElement('div');
-        controls.className = 'pagination-controls';
-
-        const createButton = (text, page, isDisabled = false, isActive = false) => {
-            const button = document.createElement('button');
-            button.innerHTML = text;
-            button.disabled = isDisabled;
-            if (isActive) button.classList.add('active');
-            if (page) {
-                button.addEventListener('click', () => {
-                    currentPage = page;
+          };
+    
+        // --- DOMContentLoaded ---
+        document.addEventListener("DOMContentLoaded",()=>{
+            carregarAprovados(); 
+    
+            if (searchInputEl) {
+                searchInputEl.addEventListener("input", e => {
+                    const termo = e.target.value.toLowerCase();
+                    aprovadosFiltrados = todosAprovados.filter(p =>
+                        (p.titulo || "").toLowerCase().includes(termo) ||
+                        (p.nome_usuario || "").toLowerCase().includes(termo)
+                    );
+                    currentPage = 1;
                     displayPage();
                 });
             }
-            return button;
-        };
-        const createEllipsis = () => {
-            const span = document.createElement('span');
-            span.className = 'ellipsis';
-            span.textContent = '...';
-            return span;
-        };
-
-        controls.appendChild(createButton('&laquo; Anterior', currentPage - 1, currentPage === 1));
-
-        const maxVisibleButtons = 5;
-        let startPage, endPage;
-        if (pageCount <= maxVisibleButtons) {
-            startPage = 1; endPage = pageCount;
-        } else {
-            const maxPagesShown = maxVisibleButtons - 2;
-            let maxPagesBeforeCurrent = Math.floor(maxPagesShown / 2);
-            let maxPagesAfterCurrent = Math.ceil(maxPagesShown / 2) - 1;
-            if (currentPage <= maxPagesBeforeCurrent) {
-                startPage = 1; endPage = maxPagesShown;
-            } else if (currentPage + maxPagesAfterCurrent >= pageCount) {
-                startPage = pageCount - maxPagesShown + 1; endPage = pageCount;
-            } else {
-                startPage = currentPage - maxPagesBeforeCurrent; endPage = currentPage + maxPagesAfterCurrent;
-            }
-        }
-        if (startPage > 1) {
-            controls.appendChild(createButton('1', 1));
-            if (startPage > 2) controls.appendChild(createEllipsis());
-        }
-        for (let i = startPage; i <= endPage; i++) {
-            controls.appendChild(createButton(i, i, false, i === currentPage));
-        }
-        if (endPage < pageCount) {
-            if (endPage < pageCount - 1) controls.appendChild(createEllipsis());
-            controls.appendChild(createButton(pageCount, pageCount));
-        }
-        controls.appendChild(createButton('Próximo &raquo;', currentPage + 1, currentPage === pageCount));
-
-        paginationContainerEl.appendChild(pageInfo);
-        paginationContainerEl.appendChild(controls);
-    }
-
-    // --- Funções do Modal ---
+            
+            document.getElementById("aprovados-back-btn").addEventListener("click", (e) => {
+                e.preventDefault();
+                history.back(); 
+            });
     
-    // ***** FUNÇÃO ATUALIZADA *****
-    window.abrirModalDetalhes = (id) => { /* Make global */
-        if (!detalhesModalEl) return;
-        const produto = todosAprovados.find(p => p.id == id);
-        if (!produto) return;
-        
-        document.getElementById('modal-descricao').textContent = produto.descricao || 'Não informado.';
-        
-        // Força a data (data_aprovacao ou created_at) a ser lida como UTC, adicionando "Z"
-        const dataUTC = new Date((produto.data_aprovacao || produto.created_at) + "Z");
-        document.getElementById('modal-data').textContent = dataUTC.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
-        
-        document.getElementById('modal-local').textContent = produto.local || 'Não informado.';
-        document.getElementById('modal-contato').textContent = produto.contato || 'Não informado.';
-        document.getElementById('modal-preco').textContent = parseFloat(produto.preco).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-
-        const carrosselContainer = document.getElementById('modal-carrossel');
-        imagensCarrosselAtual = produto.imagens || [];
-        carrosselAtualIndex = 0;
-        if (imagensCarrosselAtual.length > 0) {
-            carrosselContainer.innerHTML = `<img id="carrossel-img-modal" src="${imagensCarrosselAtual[0]}" alt="Imagem do produto" onclick="abrirModalFullscreen(0)"><button class="carrossel-btn prev" onclick="mudarImagemModal(event, -1)">&#10094;</button><button class="carrossel-btn next" onclick="mudarImagemModal(event, 1)">&#10095;</button>`;
-        } else {
-            carrosselContainer.innerHTML = `<div class="carrossel-sem-imagem">Sem Imagens</div>`;
-        }
-        
-        // ***** LÓGICA DO BOTÃO EXCLUIR RESTAURADA *****
-        const acoesContainer = document.getElementById('modal-acoes');
-        acoesContainer.innerHTML = `<button class="excluir">Excluir Anúncio</button>`;
-        acoesContainer.querySelector('.excluir').addEventListener('click', () => {
-            // Fecha o modal de detalhes ANTES de mostrar a confirmação
-            fecharModalDetalhes(); 
-            // Chama a função de excluir
-            excluirAnuncio(produto.id, produto.produto); 
-        });
-
-        detalhesModalEl.classList.add('visible');
-    };
-    window.fecharModalDetalhes = () => { if (detalhesModalEl) detalhesModalEl.classList.remove('visible'); }; /* Make global */
-
-    window.mudarImagemModal=(e,t)=>{
-        e.stopPropagation();
-        carrosselAtualIndex=(carrosselAtualIndex+t+imagensCarrosselAtual.length)%imagensCarrosselAtual.length;
-        const imgElement = document.getElementById("carrossel-img-modal");
-        imgElement.src=imagensCarrosselAtual[carrosselAtualIndex];
-        imgElement.setAttribute("onclick",`abrirModalFullscreen(${carrosselAtualIndex})`);
-     };
-    window.abrirModalFullscreen = (index) => {
-        event && event.stopPropagation();
-        if(!imagensCarrosselAtual || imagensCarrosselAtual.length === 0 || !fullscreenModalEl) return;
-        fullscreenIndex = index;
-        atualizarImagemFullscreen();
-        fullscreenModalEl.classList.add("visible");
-     };
-    window.fecharModalFullscreen = () => {
-        event && event.stopPropagation();
-        if (fullscreenModalEl) fullscreenModalEl.classList.remove("visible");
-     };
-    window.mudarImagemFullscreen = (direction) => {
-         event && event.stopPropagation();
-        fullscreenIndex = (fullscreenIndex + direction + imagensCarrosselAtual.length) % imagensCarrosselAtual.length;
-        atualizarImagemFullscreen();
-     };
-    function atualizarImagemFullscreen(){
-        if(!imagensCarrosselAtual || imagensCarrosselAtual.length === 0 || !fullscreenModalEl) return;
-        document.getElementById("fullscreen-image").src=imagensCarrosselAtual[fullscreenIndex];
-        document.getElementById("fullscreen-counter").textContent=`${fullscreenIndex+1} / ${imagensCarrosselAtual.length}`;
-    }
-
-    // --- Funções de Ação ---
+            window.addEventListener("keydown",e=>{
+                if(fullscreenModalEl && fullscreenModalEl.classList.contains("visible")){
+                    if(e.key === "Escape") fecharModalFullscreen();
+                    if(e.key === "ArrowRight") mudarImagemFullscreen(1);
+                    if(e.key === "ArrowLeft") mudarImagemFullscreen(-1);
+                } else if (detalhesModalEl && detalhesModalEl.classList.contains("visible")){
+                    if(e.key === "Escape") fecharModalDetalhes();
+                }
+            });
     
-    // ***** FUNÇÃO EXCLUIR RESTAURADA *****
-     async function excluirAnuncio(id, nomeProduto) {
-         const confirmed = await showConfirmationPopup(`Deseja realmente excluir o anúncio "${nomeProduto}"?`);
-         if (!confirmed) return;
-         
-         try {
-            const { error } = await supabase.from('aprovados').delete().eq('id', id);
-            if (error) throw error;
-            
-            showToast(`Anúncio excluído com sucesso!`, 'success');
-            
-            // Remove do array local e recarrega a visualização
-            todosAprovados = todosAprovados.filter(anuncio => anuncio.id !== id);
-            aprovadosFiltrados = aprovadosFiltrados.filter(anuncio => anuncio.id !== id);
-            
-            // Ajusta a página se a última da página foi removida
-            const totalPages = Math.ceil(aprovadosFiltrados.length / rowsPerPage);
-            if (currentPage > totalPages && totalPages > 0) {
-                currentPage = totalPages;
+            if (detalhesModalEl) {
+                detalhesModalEl.addEventListener('click', (e) => {
+                     if (e.target === detalhesModalEl) fecharModalDetalhes();
+                });
+            }
+            if (fullscreenModalEl) {
+                fullscreenModalEl.addEventListener('click', (e) => {
+                     if (e.target === fullscreenModalEl) fecharModalFullscreen();
+                });
             }
             
-            displayPage(); // Recarrega a tabela e paginação
-            
-         } catch (error) {
-            showToast(`Erro ao excluir: ${error.message}`, 'error');
-            console.error('Erro ao excluir:', error);
-         }
-      };
-
-    // --- DOMContentLoaded ---
-    document.addEventListener("DOMContentLoaded",()=>{
-        carregarAprovados(); // Load data on page load
-
-        // Search Listener
-        if (searchInputEl) {
-            searchInputEl.addEventListener("input", e => {
-                const termo = e.target.value.toLowerCase();
-                aprovadosFiltrados = todosAprovados.filter(p =>
-                    (p.produto || "").toLowerCase().includes(termo) ||
-                    (p.nome_usuario || "").toLowerCase().includes(termo)
-                );
-                currentPage = 1;
-                displayPage();
-            });
-        }
-        
-        // ***** NOVO LISTENER PARA O BOTÃO VOLTAR *****
-        document.getElementById("aprovados-back-btn").addEventListener("click", (e) => {
-            e.preventDefault();
-            history.back(); // Volta para a página anterior (ex: Dashboard)
+            const logoutBtns = document.querySelectorAll('.menu-item-logout');
+            logoutBtns.forEach(btn => btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                if(confirm("Tem certeza que deseja sair?")) {
+                    localStorage.removeItem("usuarioLogado");
+                    window.location.replace("index.html");
+                }
+            }));
         });
-
-        // Keydown Listener for Modals
-        window.addEventListener("keydown",e=>{
-            if(fullscreenModalEl && fullscreenModalEl.classList.contains("visible")){
-                if(e.key === "Escape") fecharModalFullscreen();
-                if(e.key === "ArrowRight") mudarImagemFullscreen(1);
-                if(e.key === "ArrowLeft") mudarImagemFullscreen(-1);
-            } else if (detalhesModalEl && detalhesModalEl.classList.contains("visible")){
-                if(e.key === "Escape") fecharModalDetalhes();
-            }
-        });
-
-        // Close modals on overlay click
-        if (detalhesModalEl) {
-            detalhesModalEl.addEventListener('click', (e) => {
-                 if (e.target === detalhesModalEl) fecharModalDetalhes();
-            });
-        }
-        if (fullscreenModalEl) {
-            fullscreenModalEl.addEventListener('click', (e) => {
-                 if (e.target === fullscreenModalEl) fecharModalFullscreen();
-            });
-        }
-    });
-</script>
+    </script>
 </body>
 </html>

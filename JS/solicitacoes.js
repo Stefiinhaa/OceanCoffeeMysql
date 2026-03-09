@@ -1,101 +1,89 @@
- import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.44.1/+esm";
+document.addEventListener('DOMContentLoaded', () => {
+    const gridSolicitacoes = document.getElementById('grid-solicitacoes'); 
 
-const supabaseUrl = "https://uldxazlnnpuoxfzsovmu.supabase.co";
-const supabaseKey = "eyJhbGciOiJIuJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVsZHhhemxubnB1b3hmenNvdm11Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg3Mjg2NzgsImV4cCI6MjA2NDMwNDY3OH0.fyToys8_muc1XyUebJ19gxGEkCVM_cXg80UJR894xQY";
-const supabase = createClient(supabaseUrl, supabaseKey);
+    async function carregarSolicitacoes() {
+        try {
+            const response = await fetch('buscar_pendentes.php');
+            const data = await response.json();
 
-// Função para buscar e exibir os produtos pendentes
-async function fetchPendingProducts() {
-    const { data: produtos, error } = await supabase
-        .from('produtos')
-        .select('*')
-        .is('aprovado', null); // Busca onde 'aprovado' é NULO (pendente)
-
-    if (error) {
-        console.error('Erro ao buscar produtos pendentes:', error);
-        return;
+            if (data.status === true) {
+                renderizarSolicitacoes(data.produtos);
+            } else {
+                if(gridSolicitacoes) {
+                    gridSolicitacoes.innerHTML = '<p style="text-align: center; grid-column: 1 / -1;">Nenhuma solicitacao pendente encontrada.</p>';
+                }
+            }
+        } catch (error) {
+            console.error(error);
+        }
     }
 
-    const container = document.getElementById('solicitacoes-container');
-    container.innerHTML = ''; // Limpa o container
+    function renderizarSolicitacoes(produtos) {
+        if (!gridSolicitacoes) return;
+        
+        gridSolicitacoes.innerHTML = '';
 
-    if (produtos.length === 0) {
-        container.innerHTML = '<p>Nenhuma solicitação de anúncio pendente no momento.</p>';
-        return;
+        if (produtos.length === 0) {
+            gridSolicitacoes.innerHTML = '<p style="text-align: center; grid-column: 1 / -1;">Nenhuma solicitacao pendente encontrada.</p>';
+            return;
+        }
+
+        produtos.forEach(produto => {
+            const card = document.createElement('div');
+            card.className = 'oc-product-card';
+
+            const imageUrl = produto.imagem_0 ? produto.imagem_0 : 'IMG/placeholder.png';
+            const priceFormatted = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(produto.preco);
+
+            card.innerHTML = `
+                <div class="oc-product-card__image-container">
+                    <img class="oc-product-card__image" src="${imageUrl}" alt="${produto.titulo}">
+                </div>
+                <div class="oc-product-card__content">
+                    <h3 class="oc-product-card__title">${produto.titulo}</h3>
+                    <p class="oc-product-card__description">${produto.descricao.substring(0, 100)}...</p>
+                    <span class="oc-product-card__price">${priceFormatted}</span>
+                    <div style="display: flex; gap: 10px; margin-top: 15px;">
+                        <button class="btn-aprovar" data-id="${produto.id}" style="background-color: green; color: white; border: none; padding: 10px; cursor: pointer; border-radius: 5px; width: 100%;">Aprovar</button>
+                        <button class="btn-rejeitar" data-id="${produto.id}" style="background-color: red; color: white; border: none; padding: 10px; cursor: pointer; border-radius: 5px; width: 100%;">Rejeitar</button>
+                    </div>
+                </div>`;
+            
+            gridSolicitacoes.appendChild(card);
+        });
+
+        document.querySelectorAll('.btn-aprovar').forEach(btn => {
+            btn.addEventListener('click', (e) => atualizarStatus(e.target.dataset.id, 'aprovado'));
+        });
+
+        document.querySelectorAll('.btn-rejeitar').forEach(btn => {
+            btn.addEventListener('click', (e) => atualizarStatus(e.target.dataset.id, 'rejeitado'));
+        });
     }
 
-    produtos.forEach(produto => {
-        const div = document.createElement('div');
-        div.classList.add('solicitacao-item');
-        div.setAttribute('data-id', produto.id);
-        div.innerHTML = `
-            <img src="${produto.imagens[0]}" alt="Imagem do produto" class="produto-imagem">
-            <div class="solicitacao-info">
-                <h3>${produto.produto}</h3>
-                <p><strong>Vendedor:</strong> ${produto.nome_usuario}</p>
-                <p><strong>Preço:</strong> ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(produto.preco)}</p>
-            </div>
-            <div class="solicitacao-actions">
-                <button class="approve-btn">Aprovar</button>
-                <button class="reject-btn">Rejeitar</button>
-            </div>
-        `;
-        container.appendChild(div);
-    });
-}
+    async function atualizarStatus(id, novoStatus) {
+        const confirmacao = confirm(`Tem a certeza que deseja atualizar este anuncio para ${novoStatus}?`);
+        if (!confirmacao) return;
 
-// Função para aprovar um produto
-async function approveProduct(productId) {
-    // AQUI ESTÁ A CORREÇÃO PRINCIPAL
-    const { error } = await supabase
-        .from('produtos') // Nome correto da tabela: 'produtos'
-        .update({ aprovado: true })
-        .eq('id', productId);
+        try {
+            const response = await fetch('atualizar_status.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: id, status: novoStatus })
+            });
 
-    if (error) {
-        console.error('Erro ao aprovar:', error);
-        alert('Erro ao aprovar o anúncio.');
-    } else {
-        alert('Anúncio aprovado com sucesso!');
-        // Remove o item da lista na interface
-        document.querySelector(`.solicitacao-item[data-id='${productId}']`).remove();
+            const data = await response.json();
+
+            if (data.status === true) {
+                alert('Anuncio atualizado com sucesso!');
+                carregarSolicitacoes(); 
+            } else {
+                alert('Erro ao atualizar o anuncio.');
+            }
+        } catch (error) {
+            console.error(error);
+        }
     }
-}
 
-// Função para rejeitar um produto
-async function rejectProduct(productId) {
-    // AQUI ESTÁ A CORREÇÃO PRINCIPAL
-    const { error } = await supabase
-        .from('produtos') // Nome correto da tabela: 'produtos'
-        .update({ aprovado: false })
-        .eq('id', productId);
-
-    if (error) {
-        console.error('Erro ao rejeitar:', error);
-        alert('Erro ao rejeitar o anúncio.');
-    } else {
-        alert('Anúncio rejeitado com sucesso!');
-        // Remove o item da lista na interface
-        document.querySelector(`.solicitacao-item[data-id='${productId}']`).remove();
-    }
-}
-
-
-// Adiciona os event listeners para os botões de aprovar/rejeitar
-document.addEventListener('click', (event) => {
-    const target = event.target;
-    const solicitacaoItem = target.closest('.solicitacao-item');
-    if (!solicitacaoItem) return;
-
-    const productId = solicitacaoItem.dataset.id;
-
-    if (target.classList.contains('approve-btn')) {
-        approveProduct(productId);
-    } else if (target.classList.contains('reject-btn')) {
-        rejectProduct(productId);
-    }
+    carregarSolicitacoes();
 });
-
-
-// Carrega as solicitações pendentes quando a página é carregada
-document.addEventListener('DOMContentLoaded', fetchPendingProducts);

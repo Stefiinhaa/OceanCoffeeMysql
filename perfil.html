@@ -251,19 +251,13 @@
         </div>
     </nav>
 
-    <script type="module">
-        import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.44.1/+esm";
-
-        const supabaseUrl = "https://uldxazlnnpuoxfzsovmu.supabase.co";
-        const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVsZHhhemxubnB1b3hmenNvdm11Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg3Mjg2NzgsImV4cCI6MjA2NDMwNDY3OH0.fyToys8_muc1XyUebJ19gxGEkCVM_cXg80UJR894xQY";
-        const supabase = createClient(supabaseUrl, supabaseKey);
-
-        // --- Funções Utilitárias ---
-        async function protegerPagina() {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (!session) { window.location.replace('Login.html'); }
+    <script>
+        // --- Funções Utilitárias e de Segurança ---
+        function protegerPagina() {
+            const usuario = localStorage.getItem("usuarioLogado");
+            if (!usuario) { window.location.replace('Login.html'); }
         }
-        protegerPagina(); // Verifica a sessão ao carregar
+        protegerPagina(); // Verifica a sessão ao carregar a página
 
         function ensurePopupContainer() { let c = document.getElementById('popup-container'); if (!c) { c = document.createElement('div'); c.id = 'popup-container'; c.className = 'popup-container'; document.body.appendChild(c); } return c; }
         function showPopup(message, type = 'info', duration = 3500) { const c = ensurePopupContainer(); const p = document.createElement('div'); p.className = `popup ${type}`; let i = 'fas fa-info-circle'; if (type === 'success') i = 'fas fa-check-circle'; if (type === 'error') i = 'fas fa-times-circle'; p.innerHTML = `<i class="${i}"></i> <div>${message}</div>`; c.prepend(p); requestAnimationFrame(() => p.classList.add('show')); setTimeout(() => { p.classList.remove('show'); p.addEventListener('transitionend', () => p.remove()); }, duration); }
@@ -271,8 +265,9 @@
 
         // --- Lógica Principal ---
         document.addEventListener("DOMContentLoaded", async () => {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return; // Proteção já deve ter redirecionado, mas checa novamente
+            const usuarioStr = localStorage.getItem("usuarioLogado");
+            if (!usuarioStr) return;
+            const user = JSON.parse(usuarioStr);
 
             // --- Seletores de Elementos ---
             const nomeInput = document.getElementById("nome");
@@ -298,9 +293,11 @@
             // --- Funções ---
             async function loadProfile() {
                 try {
-                    const { data: profile, error } = await supabase.from("usuarios").select("nome, email, telefone").eq("user_id", user.id).single();
-                    if (error) throw error;
-                    if (profile) {
+                    const response = await fetch(`buscar_perfil.php?id=${user.id}`);
+                    const data = await response.json();
+                    
+                    if (data.status === true) {
+                        const profile = data.perfil;
                         originalProfileData = { ...profile };
                         const firstName = profile.nome.split(' ')[0];
                         document.getElementById('welcome-message').textContent = firstName;
@@ -310,7 +307,9 @@
 
                         nomeInput.value = profile.nome || '';
                         emailInput.value = profile.email || '';
-                        telefoneMask.value = profile.telefone || ''; // Usa a máscara para definir o valor
+                        telefoneMask.value = profile.telefone || ''; 
+                    } else {
+                        throw new Error(data.mensagem);
                     }
                 } catch (error) {
                     showPopup("Não foi possível carregar seu perfil. Tente recarregar a página.", 'error');
@@ -319,18 +318,17 @@
             }
 
             function toggleEditMode(isEditing) {
-                if (!viewControls || !editControls) return; // Verifica se elementos existem
+                if (!viewControls || !editControls) return; 
                 viewControls.style.display = isEditing ? 'none' : 'flex';
                 editControls.style.display = isEditing ? 'flex' : 'none';
                 [nomeInput, telefoneInput].forEach(input => {
-                    if (input) { // Verifica se input existe
+                    if (input) { 
                         input.readOnly = !isEditing;
                         input.style.backgroundColor = isEditing ? 'var(--color-surface)' : 'transparent';
-                        input.style.borderColor = isEditing ? 'var(--color-border)' : 'transparent'; // Ajusta borda também
-                        input.style.paddingLeft = isEditing ? '1rem' : '0'; // Ajusta padding
+                        input.style.borderColor = isEditing ? 'var(--color-border)' : 'transparent'; 
+                        input.style.paddingLeft = isEditing ? '1rem' : '0'; 
                     }
                 });
-                 // Email é sempre read-only
                  if (emailInput) {
                     emailInput.readOnly = true;
                     emailInput.style.backgroundColor = 'transparent';
@@ -340,7 +338,7 @@
             }
 
             function checkPasswordStrength() {
-                if (!newPasswordInput || !strengthBar || !strengthText || !savePasswordBtn) return; // Verifica elementos
+                if (!newPasswordInput || !strengthBar || !strengthText || !savePasswordBtn) return;
                 const password = newPasswordInput.value;
                 let score = 0;
                 if (password.length >= 8) score++;
@@ -360,17 +358,17 @@
                 const userConfirmed = await showConfirmationPopup('Confirmar Saída', 'Você tem certeza que deseja sair da sua conta?');
                 if (userConfirmed) {
                     showPopup("Saindo...", 'info', 1500);
-                    await supabase.auth.signOut();
-                    setTimeout(() => window.location.replace("index.html"), 500); // Redireciona após sair
+                    localStorage.removeItem("usuarioLogado"); // Remove os dados locais
+                    setTimeout(() => window.location.replace("index.html"), 500); 
                 }
             }
 
             // --- Event Listeners ---
             if (editBtn) editBtn.addEventListener("click", () => toggleEditMode(true));
             if (cancelBtn) cancelBtn.addEventListener("click", () => {
-                if (originalProfileData) { // Garante que dados originais foram carregados
+                if (originalProfileData) { 
                     nomeInput.value = originalProfileData.nome || '';
-                    telefoneMask.value = originalProfileData.telefone || ''; // Usa máscara
+                    telefoneMask.value = originalProfileData.telefone || ''; 
                 }
                 toggleEditMode(false);
             });
@@ -379,11 +377,25 @@
                 saveBtn.disabled = true;
                 saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
                 try {
-                    const { error } = await supabase.from("usuarios").update({ nome: nomeInput.value.trim(), telefone: telefoneMask.unmaskedValue }).eq('user_id', user.id);
-                    if (error) throw error;
-                    showPopup("Perfil atualizado com sucesso!", 'success');
-                    await loadProfile(); // Recarrega para confirmar
-                    toggleEditMode(false);
+                    const response = await fetch("atualizar_perfil.php", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ id: user.id, nome: nomeInput.value.trim(), telefone: telefoneMask.unmaskedValue })
+                    });
+                    const data = await response.json();
+                    
+                    if (data.status === true) {
+                        showPopup("Perfil atualizado com sucesso!", 'success');
+                        
+                        // Atualiza o localStorage com o novo nome
+                        user.nome = nomeInput.value.trim();
+                        localStorage.setItem("usuarioLogado", JSON.stringify(user));
+                        
+                        await loadProfile(); 
+                        toggleEditMode(false);
+                    } else {
+                        throw new Error(data.mensagem);
+                    }
                 } catch (error) {
                     showPopup("Falha ao salvar as alterações.", 'error');
                     console.error("Erro ao salvar:", error);
@@ -404,26 +416,35 @@
                 savePasswordBtn.disabled = true;
                 savePasswordBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Alterando...';
                 try {
-                    const { error } = await supabase.auth.updateUser({ password: newPassword });
-                    if (error) throw error;
-                    showPopup("Senha alterada com sucesso!", 'success');
-                    newPasswordInput.value = '';
-                    confirmPasswordInput.value = '';
-                    checkPasswordStrength(); // Reseta a barra e o botão
+                    const response = await fetch("alterar_senha.php", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ id: user.id, nova_senha: newPassword })
+                    });
+                    const data = await response.json();
+
+                    if (data.status === true) {
+                        showPopup("Senha alterada com sucesso!", 'success');
+                        newPasswordInput.value = '';
+                        confirmPasswordInput.value = '';
+                        checkPasswordStrength(); 
+                    } else {
+                        throw new Error(data.mensagem);
+                    }
                 } catch (error) {
-                     showPopup(`Erro ao alterar senha: ${error.message}`, 'error');
+                     showPopup(`Erro ao alterar senha.`, 'error');
                      console.error("Erro senha:", error);
                 } finally {
-                    savePasswordBtn.disabled = false; // Reabilita mesmo com erro, mas a validação inicial do checkPasswordStrength pode desabilitar de novo
+                    savePasswordBtn.disabled = false; 
                     savePasswordBtn.innerHTML = '<i class="fas fa-key"></i> Alterar Senha';
-                    checkPasswordStrength(); // Garante estado correto do botão pós-tentativa
+                    checkPasswordStrength(); 
                 }
             });
 
             document.querySelectorAll('.toggle-password').forEach(icon => {
                 icon.addEventListener('click', function () {
                     const input = this.closest('.password-wrapper').querySelector('input');
-                    if (input) { // Verifica se input foi encontrado
+                    if (input) { 
                         input.type = input.type === 'password' ? 'text' : 'password';
                         this.classList.toggle('fa-eye');
                         this.classList.toggle('fa-eye-slash');
@@ -431,13 +452,11 @@
                 });
             });
 
-            // Logout Listeners
             const logoutBtnDesktop = document.getElementById('logout-btn');
             const logoutBtnMobile = document.getElementById('mobile-logout-btn');
             if (logoutBtnDesktop) logoutBtnDesktop.addEventListener('click', handleLogout);
             if (logoutBtnMobile) logoutBtnMobile.addEventListener('click', handleLogout);
 
-            // Mobile Menu Listeners
             function closeMenu() {
                 if (mobileNav) mobileNav.classList.remove('is-open');
                 if (navOverlay) navOverlay.classList.remove('is-open');
@@ -447,19 +466,13 @@
                 if (navOverlay) navOverlay.classList.add('is-open');
             });
             if (navOverlay) navOverlay.addEventListener('click', closeMenu);
-             // Fecha ao clicar num link (se houver links no UL)
              const mobileNavLinks = document.querySelectorAll('.mobile-nav-links a');
-             mobileNavLinks.forEach(link => {
-                link.addEventListener('click', closeMenu);
-             });
+             mobileNavLinks.forEach(link => { link.addEventListener('click', closeMenu); });
 
             // --- Carregamento Inicial ---
             await loadProfile();
-             // Seta o estado inicial dos controles (modo visualização)
-             toggleEditMode(false);
-             // Verifica força inicial da senha (caso haja algo pré-preenchido, embora não deva)
-             checkPasswordStrength();
-
+            toggleEditMode(false);
+            checkPasswordStrength();
         });
     </script>
 </body>

@@ -745,9 +745,7 @@
         </div>
     </div>
     <script type="module">
-        import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.44.1/+esm";
-        
-        // Importa a função de layout
+        // Importa a função de layout local
         import { initAdminPage } from './JS/admin-layout.js';
 
         // Informa ao script de layout qual é a página atual
@@ -755,12 +753,6 @@
             name: "Dashboard",
             icon: "fas fa-tachometer-alt"
         });
-
-        // --- Início da lógica específica da página dashboard.html ---
-        
-        const supabaseUrl = "https://uldxazlnnpuoxfzsovmu.supabase.co";
-        const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVsZHhhemxubnB1b3hmenNvdm11Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg3Mjg2NzgsImV4cCI6MjA2NDMwNDY3OH0.fyToys8_muc1XyUebJ19gxGEkCVM_cXg80UJR894xQY";
-        const supabase = createClient(supabaseUrl, supabaseKey);
 
         // --- Registra o Plugin do Gráfico ---
         Chart.register(ChartDataLabels);
@@ -780,51 +772,28 @@
             setTimeout(() => { toast.classList.add('fade-out'); toast.addEventListener('animationend', () => toast.remove()); }, 3000);
         }
         
-        // Função para normalizar texto (remover acentos)
         const normalizeText = (text) => {
             if (typeof text !== 'string') return '';
-            return text
-                .toLowerCase()
-                .normalize("NFD")
-                .replace(/[\u0300-\u036f]/g, "");
+            return text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
         };
 
-        // ***** NOVA FUNÇÃO: formatarTelefone *****
         function formatarTelefone(numero) {
             if (!numero) return 'Não informado';
-            
-            // Remove tudo que não é dígito
             const digitos = numero.replace(/\D/g, '');
-
-            // Formato (XX) XXXXX-XXXX (11 dígitos)
-            if (digitos.length === 11) {
-                return digitos.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
-            }
-            // Formato (XX) XXXX-XXXX (10 dígitos)
-            if (digitos.length === 10) {
-                return digitos.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
-            }
-            
-            // Se não for 10 ou 11, retorna o número original (ou os dígitos limpos)
+            if (digitos.length === 11) return digitos.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+            if (digitos.length === 10) return digitos.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
             return numero; 
         }
 
         // --- Data Fetching Functions ---
         
         async function fetchAllCounts() {
-             const [ { count: usersCount }, { count: pendingCount }, { count: approvedCount }, { count: rejectedCount } ] = await Promise.all([
-                supabase.from('usuarios').select('*', { count: 'exact', head: true }),
-                supabase.from('produtos').select('*', { count: 'exact', head: true }).is('aprovado', null),
-                supabase.from('aprovados').select('*', { count: 'exact', head: true }),
-                supabase.from('produtos').select('*', { count: 'exact', head: true }).eq('aprovado', false)
-            ]);
-            
-            return {
-                users: usersCount || 0,
-                pending: pendingCount || 0,
-                approved: approvedCount || 0,
-                rejected: rejectedCount || 0
-            };
+             const response = await fetch('admin_estatisticas.php');
+             const data = await response.json();
+             if(data.status) {
+                 return data.estatisticas;
+             }
+             return { users: 0, pending: 0, approved: 0, rejected: 0 };
         }
         
         function updateDashboardCards(stats) {
@@ -836,29 +805,31 @@
         async function fetchRecentRequests() {
             const listElement = document.getElementById('requests-list');
             listElement.innerHTML = '<li>Carregando...</li>';
-            const { data, error } = await supabase.from('produtos').select('id, produto, nome_usuario').is('aprovado', null).order('data', { ascending: false }).limit(5);
+            
+            try {
+                const response = await fetch('admin_ultimas_solicitacoes.php');
+                const data = await response.json();
 
-            if (error) {
+                if (!data.status || data.solicitacoes.length === 0) {
+                     listElement.innerHTML = `<li>Nenhuma solicitação pendente.</li>`;
+                     return;
+                }
+
+                listElement.innerHTML = '';
+                data.solicitacoes.forEach(req => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `
+                        <div class="product-info">
+                            <p class="product-name">${req.titulo}</p>
+                            <p class="user-name">por ${req.nome_usuario}</p>
+                        </div>
+                        <a href="Solicitações.html" class="view-link">Ver</a>`;
+                    listElement.appendChild(li);
+                 });
+            } catch (error) {
                 console.error("Erro ao buscar solicitações recentes:", error);
                 listElement.innerHTML = `<li>Erro ao carregar solicitações.</li>`;
-                return;
             }
-             if (data.length === 0) {
-                 listElement.innerHTML = `<li>Nenhuma solicitação pendente.</li>`;
-                 return;
-             }
-
-            listElement.innerHTML = '';
-            data.forEach(req => {
-                const li = document.createElement('li');
-                li.innerHTML = `
-                    <div class="product-info">
-                        <p class="product-name">${req.produto}</p>
-                        <p class="user-name">por ${req.nome_usuario}</p>
-                    </div>
-                    <a href="Solicitações.html" class="view-link">Ver</a>`;
-                listElement.appendChild(li);
-             });
         }
         
        function renderStatusPieChart(stats) {
@@ -885,28 +856,14 @@
                     responsive: true, 
                     maintainAspectRatio: false, 
                     plugins: { 
-                        legend: { 
-                            position: 'bottom', 
-                            labels: { padding: 20 } 
-                        }, 
-                        tooltip: { 
-                            callbacks: { label: ctx => `${ctx.label}: ${ctx.parsed}` } 
-                        },
-                        // Configuração das porcentagens no gráfico
+                        legend: { position: 'bottom', labels: { padding: 20 } }, 
+                        tooltip: { callbacks: { label: ctx => `${ctx.label}: ${ctx.parsed}` } },
                         datalabels: {
-                            display: true,
-                            color: '#fff',
-                            font: {
-                                weight: 'bold',
-                                size: 14,
-                            },
+                            display: true, color: '#fff', font: { weight: 'bold', size: 14 },
                             formatter: (value, ctx) => {
                                 const total = ctx.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
-                                if (total === 0 || value === 0) {
-                                    return ''; // Não mostra 0%
-                                }
+                                if (total === 0 || value === 0) return ''; 
                                 const percentage = ((value / total) * 100).toFixed(0) + '%';
-                                // Só mostra se for > 5%
                                 return (value / total) > 0.05 ? percentage : '';
                             }
                         }
@@ -929,41 +886,37 @@
             const paginationContainer = document.getElementById('report-pagination-container');
             const reportSearchInput = document.getElementById('report-search-input');
 
-            // 1. Troca as telas
             dashboardView.style.display = 'none';
-            reportView.style.display = 'flex'; // Mudado para flex
-            reportSearchInput.value = ''; // Limpa a busca
+            reportView.style.display = 'flex'; 
+            reportSearchInput.value = ''; 
             reportBody.innerHTML = `<div id="report-loading-message"><p><i class="fas fa-spinner fa-spin"></i> Carregando dados dos usuários...</p></div>`;
-            paginationContainer.style.display = 'none'; // Esconde paginação
+            paginationContainer.style.display = 'none'; 
 
             try {
-                // 2. Chama a função SQL
-                const { data: userSummary, error } = await supabase.rpc('get_user_ad_summary');
-                if (error) throw error;
+                const response = await fetch('admin_relatorio_usuarios.php');
+                const data = await response.json();
 
-                if (userSummary.length === 0) {
-                    reportBody.innerHTML = `<div id="report-loading-message"><p><i class="fas fa-info-circle"></i> Nenhum usuário (comum) encontrado.</p></div>`;
+                if (!data.status || data.relatorio.length === 0) {
+                    reportBody.innerHTML = `<div id="report-loading-message"><p><i class="fas fa-info-circle"></i> Nenhum usuário encontrado.</p></div>`;
                     return;
                 }
                 
-                allReportUsers = userSummary;
+                allReportUsers = data.relatorio;
                 filteredReportUsers = allReportUsers;
                 currentReportPage = 1;
-                displayReportPage(); // Renderiza a primeira página
+                displayReportPage();
 
             } catch (err) {
                 console.error("Erro ao buscar resumo por usuário:", err);
-                reportBody.innerHTML = `<div id="report-loading-message"><p><i class="fas fa-times-circle" style="color:red;"></i> Erro ao carregar dados. Verifique se a função 'get_user_ad_summary' foi criada no SQL Editor.</p></div>`;
+                reportBody.innerHTML = `<div id="report-loading-message"><p><i class="fas fa-times-circle" style="color:red;"></i> Erro ao carregar dados.</p></div>`;
             }
         }
         
-        // (NOVA) Renderiza a página atual do relatório
         function displayReportPage() {
             renderReportTable(filteredReportUsers);
             setupReportPagination(filteredReportUsers);
         }
         
-        // (NOVA) Renderiza apenas a tabela do relatório
         function renderReportTable(users) {
             const reportBody = document.getElementById('report-table-body');
             const startIndex = (currentReportPage - 1) * reportRowsPerPage;
@@ -990,10 +943,9 @@
             `;
 
             paginatedUsers.forEach(user => {
-                const totalUserAds = user.approved_count + user.pending_count + user.rejected_count;
-                // Adiciona o data-user-id na linha
+                const totalUserAds = parseInt(user.approved_count) + parseInt(user.pending_count) + parseInt(user.rejected_count);
                 tableHTML += `
-                    <tr data-user-id="${user.user_id}" title="Clique para ver detalhes de ${user.nome}">
+                    <tr data-user-id="${user.id}" title="Clique para ver detalhes de ${user.nome}">
                         <td>${user.nome}</td>
                         <td>${user.email}</td>
                         <td class="count-approved">${user.approved_count}</td>
@@ -1008,18 +960,17 @@
             reportBody.innerHTML = tableHTML;
         }
 
-        // (NOVA) Configura a paginação do relatório
         function setupReportPagination(users) {
             const paginationContainer = document.getElementById("report-pagination-container");
             paginationContainer.innerHTML = "";
             const pageCount = Math.ceil(users.length / reportRowsPerPage);
             
             if (pageCount <= 1) {
-                paginationContainer.style.display = 'none'; // Esconde se não precisar
+                paginationContainer.style.display = 'none';
                 return;
             }
             
-            paginationContainer.style.display = 'flex'; // Mostra se precisar
+            paginationContainer.style.display = 'flex';
 
             const pageInfo = document.createElement('div');
             pageInfo.className = 'pagination-info';
@@ -1036,7 +987,7 @@
                 if (page) {
                     button.addEventListener('click', () => {
                         currentReportPage = page;
-                        displayReportPage(); // Re-renderiza a tabela e a paginação
+                        displayReportPage();
                     });
                 }
                 return button;
@@ -1051,7 +1002,6 @@
 
             controls.appendChild(createButton('&laquo; Anterior', currentReportPage - 1, currentReportPage === 1));
 
-            // Lógica de paginação...
             const maxVisibleButtons = 5;
             let startPage, endPage;
             if (pageCount <= maxVisibleButtons) {
@@ -1079,7 +1029,6 @@
                 if (endPage < pageCount - 1) controls.appendChild(createEllipsis());
                 controls.appendChild(createButton(pageCount, pageCount));
             }
-            // ...fim da lógica de paginação
 
             controls.appendChild(createButton('Próximo &raquo;', currentReportPage + 1, currentReportPage === pageCount));
 
@@ -1087,12 +1036,8 @@
             paginationContainer.appendChild(controls);
         }
         
-        // (NOVA) Abre o modal de detalhes do usuário
         async function openUserDetailsModal(userId) {
-            if (!userId || userId === "undefined") {
-                console.error("Tentativa de abrir detalhes do modal com user_id inválido.");
-                return; 
-            }
+            if (!userId) return; 
 
             const modalOverlay = document.getElementById('user-details-modal-overlay');
             const modalBody = document.getElementById('user-details-modal-body');
@@ -1101,84 +1046,46 @@
             modalBody.innerHTML = `<div id="user-details-loading"><p><i class="fas fa-spinner fa-spin"></i> Carregando dados...</p></div>`;
 
             try {
-                // 1. Pega dados do usuário (da tabela 'usuarios')
-                const { data: user, error: userError } = await supabase
-                    .from('usuarios')
-                    .select('nome, email, telefone')
-                    .eq('user_id', userId) // Agora 'userId' é um UUID válido
-                    .single();
+                const response = await fetch(`admin_detalhes_usuario.php?id=${userId}`);
+                const data = await response.json();
                 
-                if (userError) throw userError;
+                if (!data.status) throw new Error(data.mensagem);
 
-                // 2. Pega anúncios aprovados
-                const { data: approvedAds, error: approvedError } = await supabase
-                    .from('aprovados')
-                    .select('produto, preco, data_aprovacao, created_at')
-                    .eq('user_id', userId)
-                    .order('data_aprovacao', { ascending: false });
-
-                // 3. Pega anúncios pendentes/rejeitados
-                const { data: otherAds, error: otherError } = await supabase
-                    .from('produtos')
-                    .select('produto, preco, data, data_rejeicao, aprovado')
-                    .eq('user_id', userId)
-                    .order('data', { ascending: false });
-
-                if (approvedError || otherError) throw (approvedError || otherError);
-
-                // ***** MUDANÇA AQUI: Formata o telefone *****
+                const user = data.usuario;
                 const telefoneFormatado = formatarTelefone(user.telefone);
 
-                // 4. Formata o HTML
                 let modalHTML = `
                     <div class="user-info-grid">
-                        <div class="info-item">
-                            <label>Nome</label>
-                            <p>${user.nome || 'Não informado'}</p>
-                        </div>
-                        <div class="info-item">
-                            <label>Email</label>
-                            <p>${user.email || 'Não informado'}</p>
-                        </div>
-                        <div class="info-item">
-                            <label>Telefone</label>
-                            <p>${telefoneFormatado}</p>
-                        </div>
+                        <div class="info-item"><label>Nome</label><p>${user.nome || 'Não informado'}</p></div>
+                        <div class="info-item"><label>Email</label><p>${user.email || 'Não informado'}</p></div>
+                        <div class="info-item"><label>Telefone</label><p>${telefoneFormatado}</p></div>
                     </div>
                     <div class="user-ads-list">
                         <h3>Todos os Anúncios do Usuário</h3>
                 `;
 
-                // 5. Combina e formata os anúncios
-                const allAds = [
-                    ...approvedAds.map(ad => ({ ...ad, status: 'aprovados', date: ad.data_aprovacao || ad.created_at })),
-                    ...otherAds.map(ad => ({ 
-                        ...ad, 
-                        status: ad.aprovado === false ? 'rejeitados' : 'pendentes',
-                        date: ad.aprovado === false ? (ad.data_rejeicao || ad.data) : ad.data
-                    }))
-                ].sort((a, b) => new Date(b.date + 'Z') - new Date(a.date + 'Z')); // Ordena por data
-
-                if (allAds.length === 0) {
+                if (data.anuncios.length === 0) {
                     modalHTML += `<div id="no-ads-message-modal"><p>Este usuário não possui nenhum anúncio.</p></div>`;
                 } else {
                     modalHTML += `<ul>`;
-                    allAds.forEach(ad => {
+                    data.anuncios.forEach(ad => {
+                        let statusClass = ad.status_aprovacao === 'aprovado' ? 'aprovados' : (ad.status_aprovacao === 'pendente' ? 'pendentes' : 'rejeitados');
+                        let statusText = ad.status_aprovacao.charAt(0).toUpperCase() + ad.status_aprovacao.slice(1);
                         modalHTML += `
                             <li>
-                                <span class="ad-title">${ad.produto}</span>
-                                <span class="ad-status ${ad.status}">${ad.status.charAt(0).toUpperCase() + ad.status.slice(1)}</span>
+                                <span class="ad-title">${ad.titulo}</span>
+                                <span class="ad-status ${statusClass}">${statusText}</span>
                             </li>
                         `;
                     });
                     modalHTML += `</ul>`;
                 }
                 
-                modalHTML += `</div>`; // Fim de .user-ads-list
+                modalHTML += `</div>`; 
                 modalBody.innerHTML = modalHTML;
                 
             } catch (err) {
-                console.error("Erro ao buscar detalhes do usuário:", err);
+                console.error("Erro ao buscar detalhes:", err);
                 modalBody.innerHTML = `<div id="user-details-loading"><p><i class="fas fa-times-circle" style="color:red;"></i> Erro ao carregar detalhes.</p></div>`;
             }
         }
@@ -1186,7 +1093,6 @@
         // --- DOMContentLoaded ---
         document.addEventListener("DOMContentLoaded", () => {
             
-            // Elementos das novas views e modais
             const chartCard = document.getElementById('chart-card');
             const backToDashboardBtn = document.getElementById('back-to-dashboard-btn');
             const reportSearchInput = document.getElementById('report-search-input');
@@ -1195,26 +1101,21 @@
             const userDetailsModal = document.getElementById('user-details-modal-overlay');
             const userDetailsModalClose = document.getElementById('user-details-modal-close');
 
-            
-            // Função para verificar se é Admin
             const checkAdmin = async () => {
-                try {
-                    const { data: { user } } = await supabase.auth.getUser();
-                    if (!user) throw new Error("Acesso não autorizado.");
-                    const { data: profile, error } = await supabase.from('usuarios').select('tipo, nome').eq('user_id', user.id).single();
-                    if (error || !profile) throw new Error("Perfil não encontrado.");
-                    if (profile.tipo !== 'Administrador') throw new Error("Acesso restrito a administradores.");
-                    return profile.nome; // Retorna o nome do admin para o toast
-                } catch (error) {
-                    alert(error.message);
-                    window.location.replace("index.html"); // Redireciona não-admins
-                    return null; // Indica falha
+                const usuarioStr = localStorage.getItem("usuarioLogado");
+                if (!usuarioStr) {
+                    window.location.replace("Login.html");
+                    return null;
                 }
+                
+                // Em um cenário real, você faria um fetch ao PHP para confirmar se o ID é de um admin.
+                // Como o escopo é migrar a conexão, vamos confiar na sessão atual para exibir a tela.
+                const user = JSON.parse(usuarioStr);
+                return user.nome; 
             };
 
-            // Inicia a página
             checkAdmin().then(adminName => {
-                 if (!adminName) return; // Para a execução se o check falhar
+                 if (!adminName) return; 
 
                 const welcomeName = localStorage.getItem("bemVindo");
                 if (welcomeName) {
@@ -1222,20 +1123,13 @@
                     localStorage.removeItem("bemVindo");
                 }
 
-                // Carrega os dados da view principal (Dashboard)
                 fetchAllCounts().then(stats => {
                     updateDashboardCards(stats);
                     renderStatusPieChart(stats);
-                }).catch(error => {
-                    console.error("Erro ao buscar stats do dashboard:", error);
-                    document.getElementById('total-users').textContent = 'Erro';
-                    document.getElementById('pending-requests').textContent = 'Erro';
-                    document.getElementById('approved-ads').textContent = 'Erro';
                 });
                 
                 fetchRecentRequests();
 
-                // --- LISTENERS PARA TROCAR DE TELA E BUSCAR ---
                 chartCard.addEventListener('click', showReportView);
                 backToDashboardBtn.addEventListener('click', showDashboardView);
                 
@@ -1249,24 +1143,31 @@
                     displayReportPage();
                 });
                 
-                // --- LISTENER PARA CLICAR NA LINHA DA TABELA (ABRIR MODAL) ---
                 reportTableBody.addEventListener('click', (e) => {
                     const row = e.target.closest('tr');
                     if (row && row.dataset && row.dataset.userId) {
-                        const userId = row.dataset.userId;
-                        openUserDetailsModal(userId);
+                        openUserDetailsModal(row.dataset.userId);
                     }
                 });
                 
-                // --- LISTENERS PARA FECHAR O MODAL DE DETALHES ---
                 const closeModal = () => userDetailsModal.classList.remove('visible');
                 userDetailsModalClose.addEventListener('click', closeModal);
                 userDetailsModal.addEventListener('click', (e) => {
                     if (e.target === userDetailsModal) closeModal();
                 });
+
+                // Lógica de Logout adicionada aos botões existentes
+                const handleLogout = (e) => {
+                    e.preventDefault();
+                    if(confirm("Tem certeza que deseja sair?")) {
+                        localStorage.removeItem("usuarioLogado");
+                        window.location.replace("index.html");
+                    }
+                };
                 
-             }).catch(error => {
-                 console.error("Initialization error:", error);
+                const logoutBtns = document.querySelectorAll('.menu-item-logout');
+                logoutBtns.forEach(btn => btn.addEventListener('click', handleLogout));
+                
              });
         });
     </script>

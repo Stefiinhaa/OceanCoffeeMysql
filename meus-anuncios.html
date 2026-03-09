@@ -455,16 +455,11 @@
         </div>
     </nav>
 
-    <script type="module">
-        import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.44.1/+esm";
-
-        const supabaseUrl = "https://uldxazlnnpuoxfzsovmu.supabase.co";
-        const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVsZHhhemxubnB1b3hmenNvdm11Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg3Mjg2NzgsImV4cCI6MjA2NDMwNDY3OH0.fyToys8_muc1XyUebJ19gxGEkCVM_cXg80UJR894xQY";
-        const supabase = createClient(supabaseUrl, supabaseKey);
-
-        async function protegerPagina() {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (!session) { window.location.replace('Login.html'); }
+    <script>
+        // --- Funções Utilitárias e de Segurança ---
+        function protegerPagina() {
+            const usuario = localStorage.getItem("usuarioLogado");
+            if (!usuario) { window.location.replace('Login.html'); }
         }
         protegerPagina();
 
@@ -498,16 +493,17 @@
         }
 
         document.addEventListener("DOMContentLoaded", async () => {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return;
+            const usuarioStr = localStorage.getItem("usuarioLogado");
+            if (!usuarioStr) return;
+            const user = JSON.parse(usuarioStr);
 
-            const { data: profile } = await supabase.from("usuarios").select("nome, email").eq("user_id", user.id).single();
-            if (profile) {
-                const firstName = profile.nome.split(' ')[0];
+            // Preencher dados do utilizador no menu lateral
+            if (user) {
+                const firstName = user.nome.split(' ')[0];
                 document.getElementById('welcome-message').textContent = firstName;
                 document.getElementById('mobile-welcome-message').textContent = `Olá, ${firstName}!`;
-                document.getElementById('user-email-sidebar').textContent = profile.email;
-                document.getElementById('avatar-inicial').textContent = profile.nome.charAt(0).toUpperCase();
+                document.getElementById('user-email-sidebar').textContent = user.email;
+                document.getElementById('avatar-inicial').textContent = user.nome.charAt(0).toUpperCase();
             }
 
             const adList = document.getElementById('ad-list');
@@ -516,45 +512,26 @@
             let allUserAds = [];
             let filteredAds = [];
             let currentPage = 1;
-            const rowsPerPage = 5; // Anúncios por página
+            const rowsPerPage = 5;
 
             async function loadAds() {
                 adList.innerHTML = '<p style="text-align: center; padding: 2rem;">Carregando...</p>';
                 try {
-                    // ***** MUDANÇA IMPORTANTE: Pedindo 'created_at' *****
-                    // 'created_at' é a coluna de data automática do Supabase.
-                    const { data: approvedAds, error: approvedError } = await supabase.from('aprovados').select('*, created_at').eq('user_id', user.id);
-                    if (approvedError) throw approvedError;
-                    
-                    // Pedimos 'data_rejeicao'
-                    const { data: otherAds, error: otherError } = await supabase.from('produtos').select('*, motivo_rejeicao, rejeicao_vista, data_rejeicao').eq('user_id', user.id);
-                    if (otherError) throw otherError;
+                    // Pede ao PHP apenas os anúncios do utilizador logado
+                    const response = await fetch(`listar_meus_anuncios.php?usuario_id=${user.id}`);
+                    const data = await response.json();
 
-                    // ***** LÓGICA DE DATA MAIS ROBUSTA *****
-                    const mappedApproved = (approvedAds || []).map(ad => ({
-                        ...ad, 
-                        status: 'aprovados', 
-                        dataTable: 'aprovados', 
-                        // Use 'data_aprovacao' PRIMEIRO. Se for nula, use 'created_at'.
-                        date: ad.data_aprovacao || ad.created_at 
-                    }));
-
-                    const mappedOthers = (otherAds || []).map(ad => ({
-                        ...ad, 
-                        status: ad.aprovado === false ? 'rejeitados' : 'pendentes', 
-                        dataTable: 'produtos', 
-                        // Se rejeitado, use 'data_rejeicao'. Se for nula, use a data de envio 'data'.
-                        // Se pendente, use 'data' (envio).
-                        date: ad.aprovado === false ? (ad.data_rejeicao || ad.data) : ad.data
-                    }));
-                    // ***** FIM DA LÓGICA DE DATA *****
-
-                    allUserAds = [...mappedApproved, ...mappedOthers];
-                    // Ordena por data (os que tiverem data nula ou inválida vão para o fim)
-                    allUserAds.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
-
-                    displayPage();
-
+                    if (data.status === true) {
+                        // Mapeia o status do MySQL para as classes CSS já existentes
+                        allUserAds = data.produtos.map(ad => ({
+                            ...ad,
+                            status: ad.status_aprovacao === 'aprovado' ? 'aprovados' : (ad.status_aprovacao === 'rejeitado' ? 'rejeitados' : 'pendentes')
+                        }));
+                        displayPage();
+                    } else {
+                        allUserAds = [];
+                        displayPage();
+                    }
                 } catch (error) {
                     console.error("Erro ao carregar anúncios:", error);
                     showPopup('Erro ao carregar seus anúncios.', 'error');
@@ -587,43 +564,14 @@
                         const adCard = document.createElement('div');
                         adCard.className = 'ad-card';
                         adCard.dataset.id = ad.id;
-                        adCard.dataset.table = ad.dataTable;
 
                         const statusClass = ad.status;
                         const statusText = { aprovados: 'Aprovado', pendentes: 'Pendente', rejeitados: 'Rejeitado' }[statusClass];
                         
-                        let dateText = '';
-                        if (statusClass === 'aprovados') {
-                            dateText = 'Aprovado em';
-                        } else if (statusClass === 'pendentes') {
-                            dateText = 'Enviado em';
-                        } else if (statusClass === 'rejeitados') {
-                            dateText = 'Rejeitado em';
-                        }
-                        
-                        // ***** CORREÇÃO FINAL 'Invalid Date' *****
-                        let formattedDate;
-                        // 1. Checa se a data (que agora já tem o fallback) existe
-                        if (ad.date) {
-                            // 2. Adiciona o 'Z' para garantir que o JS leia como UTC
-                            const dataUTC = new Date(ad.date + "Z");
-                            
-                            // 3. Verifica se a data criada é válida
-                            if (!isNaN(dataUTC.getTime())) {
-                                formattedDate = dataUTC.toLocaleString('pt-BR', { timeZone: "America/Sao_Paulo" });
-                            } else {
-                                // Isso acontece se ad.date for uma string inválida
-                                formattedDate = 'Data indisponível'; 
-                            }
-                        } else {
-                            // Isso acontece se ad.date for null ou undefined
-                            formattedDate = 'Data não informada'; 
-                        }
-                        // ***** FIM DA CORREÇÃO *****
-
                         let reasonIconHtml = '';
-                        if (ad.status === 'rejeitados' && ad.motivo_rejeicao) {
-                            const badgeHtml = ad.rejeicao_vista === false ? '<div class="notification-badge"></div>' : '';
+                        if (statusClass === 'rejeitados' && ad.motivo_rejeicao) {
+                            // Badge de notificação caso não tenha sido visto
+                            const badgeHtml = (!ad.rejeicao_vista || ad.rejeicao_vista == 0) ? '<div class="notification-badge"></div>' : '';
                             reasonIconHtml = `
                                 <div class="status-container">
                                     <i class="fas fa-envelope rejection-reason-icon" title="Ver motivo da rejeição"></i>
@@ -631,20 +579,17 @@
                                 </div>`;
                         }
                         
-                        const reasonBoxHtml = ad.status === 'rejeitados' && ad.motivo_rejeicao
+                        const reasonBoxHtml = statusClass === 'rejeitados' && ad.motivo_rejeicao
                             ? `<div class="rejection-reason-box">${ad.motivo_rejeicao}</div>`
                             : '';
 
-                        // ***** HTML SEM CORES E ÍCONES DINÂMICOS NA DATA *****
+                        const imagemSrc = ad.imagem_0 ? ad.imagem_0 : 'IMG/placeholder.png';
+
                         adCard.innerHTML = `
-                            <img src="${ad.imagens[0] || 'IMG/placeholder.png'}" alt="${ad.produto}" class="ad-image">
+                            <img src="${imagemSrc}" alt="${ad.titulo}" class="ad-image">
                             <div class="ad-info">
-                                <h3>${ad.produto}</h3>
+                                <h3>${ad.titulo}</h3>
                                 <p class="ad-price">${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(ad.preco)}</p>
-                                <p class="ad-date">
-                                    <i class="fas fa-calendar-alt"></i>
-                                    ${dateText}: ${formattedDate}
-                                </p> 
                             </div>
                             <div class="ad-status-actions">
                                 <div class="status-container">
@@ -652,7 +597,7 @@
                                     ${reasonIconHtml}
                                 </div>
                                 <div class="ad-actions">
-                                    ${ad.status === 'pendentes' || ad.status === 'rejeitados' ? `<a href="editar-anuncio.html?id=${ad.id}" class="action-btn edit" title="Editar anúncio"><i class="fas fa-pencil-alt"></i></a>` : ''}
+                                    ${statusClass === 'pendentes' || statusClass === 'rejeitados' ? `<a href="editar-anuncio.html?id=${ad.id}" class="action-btn edit" title="Editar anúncio"><i class="fas fa-pencil-alt"></i></a>` : ''}
                                     <button class="action-btn delete" title="Excluir anúncio"><i class="fas fa-trash-alt"></i></button>
                                 </div>
                             </div>
@@ -761,11 +706,7 @@
                         reasonBox.classList.toggle('visible');
                         if (badge) {
                             badge.remove();
-                            const adId = adCard.dataset.id;
-                            await supabase
-                                .from('produtos')
-                                .update({ rejeicao_vista: true })
-                                .eq('id', adId);
+                            // Se quisermos marcar como lido no MySQL no futuro, adicionamos aqui o fetch.
                         }
                     }
                     return;
@@ -775,19 +716,28 @@
                 if (deleteButton) {
                     const adCard = deleteButton.closest('.ad-card');
                     const adId = adCard.dataset.id;
-                    const adTable = adCard.dataset.table;
 
                     const confirmed = await showConfirmationPopup('Excluir Anúncio', 'Tem certeza que deseja excluir este anúncio? Esta ação não pode ser desfeita.', { confirmText: 'Sim, Excluir' });
 
                     if (confirmed) {
-                        const { error: dbError } = await supabase.from(adTable).delete().eq('id', adId);
-                        if (dbError) {
-                            showPopup(`Erro ao excluir o anúncio: ${dbError.message}`, 'error');
-                            return;
+                        try {
+                            const response = await fetch('excluir_anuncio.php', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ id: adId })
+                            });
+                            const data = await response.json();
+                            
+                            if(data.status === true) {
+                                showPopup('Anúncio excluído com sucesso!', 'success');
+                                allUserAds = allUserAds.filter(ad => ad.id != adId);
+                                displayPage();
+                            } else {
+                                throw new Error(data.mensagem);
+                            }
+                        } catch (error) {
+                            showPopup(`Erro ao excluir o anúncio.`, 'error');
                         }
-                        showPopup('Anúncio excluído com sucesso!', 'success');
-                        allUserAds = allUserAds.filter(ad => !(ad.id == adId && ad.dataTable == adTable));
-                        displayPage();
                     }
                 }
             });
@@ -797,7 +747,7 @@
                 const userConfirmed = await showConfirmationPopup('Confirmar Saída', 'Você tem certeza que deseja sair da sua conta?', { confirmText: 'Sim, Sair' });
                 if (userConfirmed) {
                     showPopup("Saindo...", 'info', 1500);
-                    await supabase.auth.signOut();
+                    localStorage.removeItem("usuarioLogado"); // Remove sessão
                     setTimeout(() => window.location.replace("index.html"), 500);
                 }
             }

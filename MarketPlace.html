@@ -83,94 +83,100 @@
     }
   </script>
 
-  <script type="module">
-    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.44.1/+esm";
+<script>
+  document.addEventListener('DOMContentLoaded', async () => {
+      const productContent = document.getElementById('product-content');
+      const loadingMessage = document.getElementById('loading-message');
+      const breadcrumbProductName = document.getElementById('breadcrumb-product-name');
 
-    const supabaseUrl = "https://uldxazlnnpuoxfzsovmu.supabase.co";
-    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVsZHhhemxubnB1b3hmenNvdm11Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg3Mjg2NzgsImV4cCI6MjA2NDMwNDY3OH0.fyToys8_muc1XyUebJ19gxGEkCVM_cXg80UJR894xQY";
-    const supabase = createClient(supabaseUrl, supabaseKey);
+      const params = new URLSearchParams(window.location.search);
+      const productId = params.get('id');
 
-    document.addEventListener('DOMContentLoaded', async () => {
-        const productContent = document.getElementById('product-content');
-        const loadingMessage = document.getElementById('loading-message');
-        const breadcrumbProductName = document.getElementById('breadcrumb-product-name');
+      if (!productId) {
+          loadingMessage.innerHTML = '<h2>ID do produto não fornecido.</h2><p>Por favor, selecione um produto na loja.</p>';
+          return;
+      }
 
-        const params = new URLSearchParams(window.location.search);
-        const productId = params.get('id');
+      try {
+          // Pede os dados do produto ao PHP usando o ID da URL
+          const response = await fetch(`buscar_produto.php?id=${productId}`);
+          const data = await response.json();
 
-        if (!productId) {
-            loadingMessage.innerHTML = '<h2>ID do produto não fornecido.</h2><p>Por favor, selecione um produto na loja.</p>';
-            return;
-        }
+          if (data.status === true) {
+              const product = data.produto;
+              
+              loadingMessage.style.display = 'none';
+              document.title = `${product.titulo} - Ocean Coffee`;
+              breadcrumbProductName.textContent = product.titulo;
 
-        const { data: product, error } = await supabase
-            .from('aprovados')
-            .select('*')
-            .eq('id', productId)
-            .single();
+              const priceFormatted = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(product.preco);
 
-        if (error || !product) {
-            console.error('Erro ao buscar produto:', error);
-            loadingMessage.innerHTML = '<h2>Produto não encontrado.</h2><p>O produto que você está procurando pode ter sido removido ou não existe.</p>';
-            return;
-        }
-        
-        loadingMessage.style.display = 'none';
-        document.title = `${product.produto} - Ocean Coffee`;
-        breadcrumbProductName.textContent = product.produto;
+              // Reagrupar as imagens que vêm separadas do MySQL
+              const imagensArray = [];
+              if(product.imagem_0) imagensArray.push(product.imagem_0);
+              if(product.imagem_1) imagensArray.push(product.imagem_1);
+              if(product.imagem_2) imagensArray.push(product.imagem_2);
 
-        const priceFormatted = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(product.preco);
+              let mainImage = imagensArray.length > 0 ? imagensArray[0] : 'IMG/placeholder.png';
+              let thumbnails = '';
+              if (imagensArray.length > 0) {
+                  thumbnails = imagensArray.map((imgSrc, index) => 
+                      `<img src="${imgSrc}" alt="Miniatura do produto ${index + 1}" class="thumbnail ${index === 0 ? 'active' : ''}" data-src="${imgSrc}" onclick="changeImage('${imgSrc}')">`
+                  ).join('');
+              }
+              
+              // Tratar contatos (caso ainda não tenha inserido o contacto na DB, usa um genérico para não dar erro)
+              const contatoOriginal = product.contato || '00000000000';
+              const nomeVendedor = product.nome_usuario || 'Vendedor Anônimo';
+              const localVendedor = product.local || 'Localização não informada';
 
-        let mainImage = product.imagens && product.imagens.length > 0 ? product.imagens[0] : 'IMG/placeholder.png';
-        let thumbnails = '';
-        if (product.imagens && product.imagens.length > 0) {
-            thumbnails = product.imagens.map((imgSrc, index) => 
-                `<img src="${imgSrc}" alt="Miniatura do produto ${index + 1}" class="thumbnail ${index === 0 ? 'active' : ''}" data-src="${imgSrc}" onclick="changeImage('${imgSrc}')">`
-            ).join('');
-        }
-        
-        const formattedPhone = product.contato.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
-
-        productContent.innerHTML = `
-            <div class="product-gallery">
-                <div class="main-image">
-                    <img src="${mainImage}" alt="Imagem principal de ${product.produto}" id="mainProductImage">
-                </div>
-                <div class="thumbnail-images">
-                    ${thumbnails}
-                </div>
-            </div>
-
-            <div class="product-main-details">
-                <div class="product-info-card">
-                  <h1 class="product-title">${product.produto}</h1>
-                  <p class="product-price">${priceFormatted}</p>
-                  
-                  <div class="product-section">
-                      <h2 class="section-title"><i class="fas fa-align-left"></i> Descrição</h2>
-                      <p class="product-description">${product.descricao}</p>
+              productContent.innerHTML = `
+                  <div class="product-gallery">
+                      <div class="main-image">
+                          <img src="${mainImage}" alt="Imagem principal de ${product.titulo}" id="mainProductImage">
+                      </div>
+                      <div class="thumbnail-images">
+                          ${thumbnails}
+                      </div>
                   </div>
-                </div>
-                
-                <div class="seller-info-card">
-                  <h2 class="section-title"><i class="fas fa-user"></i> Informações do Vendedor</h2>
-                  <div class="seller-detail">
-                    <i class="fas fa-user-circle"></i>
-                    <span>${product.nome_usuario}</span>
+
+                  <div class="product-main-details">
+                      <div class="product-info-card">
+                        <h1 class="product-title">${product.titulo}</h1>
+                        <p class="product-price">${priceFormatted}</p>
+                        
+                        <div class="product-section">
+                            <h2 class="section-title"><i class="fas fa-align-left"></i> Descrição</h2>
+                            <p class="product-description">${product.descricao}</p>
+                        </div>
+                      </div>
+                      
+                      <div class="seller-info-card">
+                        <h2 class="section-title"><i class="fas fa-user"></i> Informações do Vendedor</h2>
+                        <div class="seller-detail">
+                          <i class="fas fa-user-circle"></i>
+                          <span>${nomeVendedor}</span>
+                        </div>
+                        <div class="seller-detail">
+                          <i class="fas fa-map-marker-alt"></i>
+                          <span>${localVendedor}</span>
+                        </div>
+                        <a href="https://wa.me/55${contatoOriginal}?text=Olá, tenho interesse no seu anúncio: ${encodeURIComponent(product.titulo)}" class="contact-button" target="_blank">
+                            <i class="fab fa-whatsapp"></i>
+                            <span>Entrar em Contato via WhatsApp</span>
+                        </a>
+                      </div>
                   </div>
-                  <div class="seller-detail">
-                    <i class="fas fa-map-marker-alt"></i>
-                    <span>${product.local}</span>
-                  </div>
-                  <a href="https://wa.me/55${product.contato}?text=Olá, tenho interesse no seu anúncio: ${encodeURIComponent(product.produto)}" class="contact-button" target="_blank">
-                      <i class="fab fa-whatsapp"></i>
-                      <span>Entrar em Contato via WhatsApp</span>
-                  </a>
-                </div>
-            </div>
-        `;
-    });
-  </script>
+              `;
+          } else {
+              loadingMessage.innerHTML = '<h2>Produto não encontrado.</h2><p>O produto que você está procurando pode ter sido removido ou não existe.</p>';
+          }
+      } catch (error) {
+          console.error('Erro ao buscar produto:', error);
+          loadingMessage.innerHTML = '<h2>Erro de conexão.</h2><p>Não foi possível carregar as informações do servidor.</p>';
+      }
+  });
+</script>
 
 </body>
 </html>

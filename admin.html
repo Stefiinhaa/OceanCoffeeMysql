@@ -703,34 +703,23 @@
         </div>
     </div>
     <script type="module">
-        import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.44.1/+esm";
-        // 1. Importa a NOSSA NOVA função de layout
         import { initAdminPage } from './JS/admin-layout.js';
 
-        // 2. Informa ao script de layout qual é a página atual
+        // Informa ao script de layout qual é a página atual
         initAdminPage({
             name: "Usuários",
             icon: "fas fa-users"
         });
 
-        // --- Início da lógica específica da página admin.html ---
-    
-        const supabaseUrl = "https://uldxazlnnpuoxfzsovmu.supabase.co";
-        const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVsZHhhemxubnB1b3hmenNvdm11Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg3Mjg2NzgsImV4cCI6MjA2NDMwNDY3OH0.fyToys8_muc1XyUebJ19gxGEkCVM_cXg80UJR894xQY";
-        const supabase = createClient(supabaseUrl, supabaseKey);
-
         let allUsers = [];
         let filteredUsers = [];
         let currentPage = 1;
         const rowsPerPage = 10;
-        
-        // ***** NOVA VARIÁVEL GLOBAL: Estado do filtro de tipo *****
         let currentTipoFilter = 'Todos'; // 'Todos', 'Comum', 'Administrador'
         
         const userDetailsModal = document.getElementById('user-details-modal-overlay');
         const userDetailsModalClose = document.getElementById('user-details-modal-close');
         const userDetailsModalBody = document.getElementById('user-details-modal-body');
-
 
         function showPopup(message, type = 'error') {
              return new Promise((resolve) => {
@@ -764,13 +753,14 @@
                 overlay.querySelector('.btn-cancel')?.addEventListener('click', () => closePopup(false));
             });
         }
+
         function showToast(message, type = 'success') {
              const toast = document.createElement('div');
             toast.className = `toast-notification ${type}`;
             const iconClass = type === 'success' ? 'fa-check-circle' : (type === 'error' ? 'fa-times-circle' : 'fa-info-circle');
             
             if (type !== 'success' && type !== 'error') {
-                toast.style.backgroundColor = '#007bff'; // Cor azul para "info"
+                toast.style.backgroundColor = '#007bff';
             }
             toast.innerHTML = `<i class="fas ${iconClass}"></i><span>${message}</span>`;
             document.body.appendChild(toast);
@@ -782,29 +772,14 @@
         
         const normalizeText = (text) => {
             if (typeof text !== 'string') return '';
-            return text
-                .toLowerCase()
-                .normalize("NFD")
-                .replace(/[\u0300-\u036f]/g, "");
+            return text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
         };
         
-        // ***** NOVA FUNÇÃO: formatarTelefone *****
         function formatarTelefone(numero) {
             if (!numero) return 'Não informado';
-            
-            // Remove tudo que não é dígito
             const digitos = numero.replace(/\D/g, '');
-
-            // Formato (XX) XXXXX-XXXX (11 dígitos)
-            if (digitos.length === 11) {
-                return digitos.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
-            }
-            // Formato (XX) XXXX-XXXX (10 dígitos)
-            if (digitos.length === 10) {
-                return digitos.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
-            }
-            
-            // Se não for 10 ou 11, retorna o número original (ou os dígitos limpos)
+            if (digitos.length === 11) return digitos.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+            if (digitos.length === 10) return digitos.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
             return numero; 
         }
         
@@ -812,36 +787,36 @@
             const tbody = document.querySelector("tbody");
             tbody.innerHTML = `<tr><td colspan="4">Carregando usuários...</td></tr>`;
             
-            const { data, error, count } = await supabase
-                .from("usuarios")
-                .select("id, user_id, nome, email, tipo", { count: 'exact' })
-                .order('nome', { ascending: true });
+            try {
+                const response = await fetch('admin_listar_usuarios.php');
+                const data = await response.json();
 
-            if (error) {
+                if (!data.status) throw new Error(data.mensagem);
+
+                allUsers = data.usuarios || [];
+                filteredUsers = allUsers;
+                const headerTitleSpan = document.getElementById('headerTitle');
+                if (headerTitleSpan) {
+                    headerTitleSpan.textContent = `Contas Registradas (${allUsers.length})`;
+                }
+                 
+                currentTipoFilter = 'Todos';
+                const filterIcon = document.getElementById('tipo-filter-btn');
+                filterIcon.style.color = '#ccc'; 
+                filterIcon.title = 'Filtrar por tipo'; 
+                document.getElementById("searchInput").value = '';
+                 
+                currentPage = 1;
+                displayPage();
+            } catch (error) {
                 console.error("Erro ao carregar usuários:", error);
                 tbody.innerHTML = `<tr><td colspan="4">Erro ao carregar usuários.</td></tr>`;
-                return;
             }
-            allUsers = data || [];
-            filteredUsers = allUsers;
-            const headerTitleSpan = document.getElementById('headerTitle');
-             if (headerTitleSpan) {
-                headerTitleSpan.textContent = `Contas Registradas (${count || 0})`;
-             }
-             
-            currentTipoFilter = 'Todos';
-            const filterIcon = document.getElementById('tipo-filter-btn');
-            filterIcon.style.color = '#ccc'; // Reseta a cor
-            filterIcon.title = 'Filtrar por tipo'; // Reseta o title
-            document.getElementById("searchInput").value = '';
-             
-            currentPage = 1;
-            displayPage();
         }
         
         function displayPage() {
              renderizarTabela(filteredUsers);
-            setupPagination(filteredUsers);
+             setupPagination(filteredUsers);
         }
         
         function renderizarTabela(usersToRender) {
@@ -860,10 +835,9 @@
             }
 
             paginatedUsers.forEach((usuario) => {
-                const { id, user_id, nome, email, tipo = "Comum" } = usuario;
+                const { id, nome, email, tipo = "Comum" } = usuario;
                 const tr = document.createElement("tr");
                 tr.dataset.userId = id;
-                tr.dataset.userIdUuid = user_id;
                 
                 tr.innerHTML = `
                     <td><span>${nome}</span><input class="input_edicao" type="text" style="display:none" value="${nome}"></td>
@@ -881,7 +855,7 @@
          }
          
         function setupPagination(users) {
-             const paginationContainer = document.getElementById("pagination-container");
+            const paginationContainer = document.getElementById("pagination-container");
             paginationContainer.innerHTML = "";
             const pageCount = Math.ceil(users.length / rowsPerPage);
             if (pageCount <= 1) return;
@@ -977,105 +951,50 @@
          }
          
         async function openUserDetailsModal(userId) {
-            if (!userId || userId === "undefined") {
-                console.error("ID de usuário inválido para o modal:", userId);
-                await showPopup("Não foi possível carregar os detalhes deste usuário (ID inválido).", 'error');
-                return; 
-            }
+            if (!userId) return; 
 
             userDetailsModal.classList.add('visible');
             userDetailsModalBody.innerHTML = `<div id="user-details-loading"><p><i class="fas fa-spinner fa-spin"></i> Carregando dados...</p></div>`;
 
             try {
-                // 1. Pega dados do usuário (da tabela 'usuarios')
-                const { data: user, error: userError } = await supabase
-                    .from('usuarios')
-                    .select('nome, email, telefone')
-                    .eq('user_id', userId) // Busca pelo UUID
-                    .single();
+                // Requisição combinada que traz dados do utilizador e seus anúncios
+                const response = await fetch(`admin_dados_usuario_completo.php?id=${userId}`);
+                const data = await response.json();
                 
-                if (userError) throw userError;
+                if (!data.status) throw new Error(data.mensagem);
 
-                // 2. Pega anúncios aprovados
-                const { data: approvedAds, error: approvedError } = await supabase
-                    .from('aprovados')
-                    .select('produto, preco, data_aprovacao, created_at')
-                    .eq('user_id', userId)
-                    .order('data_aprovacao', { ascending: false, nullsFirst: false });
-
-                // 3. Pega anúncios pendentes/rejeitados
-                // (MODIFICADO) Adicionado 'id', 'motivo_rejeicao', 'rejeicao_vista'
-                const { data: otherAds, error: otherError } = await supabase
-                    .from('produtos')
-                    .select('id, produto, preco, data, data_rejeicao, aprovado, motivo_rejeicao, rejeicao_vista')
-                    .eq('user_id', userId)
-                    .order('data', { ascending: false });
-
-                if (approvedError || otherError) throw (approvedError || otherError);
-                
-                // ***** MUDANÇA AQUI: Formata o telefone *****
+                const user = data.usuario;
+                const allAds = data.anuncios;
                 const telefoneFormatado = formatarTelefone(user.telefone);
 
-                // 4. Formata o HTML
                 let modalHTML = `
                     <div class="user-info-grid">
-                        <div class="info-item">
-                            <label>Nome</label>
-                            <p>${user.nome || 'Não informado'}</p>
-                        </div>
-                        <div class="info-item">
-                            <label>Email</label>
-                            <p>${user.email || 'Não informado'}</p>
-                        </div>
-                        <div class="info-item">
-                            <label>Telefone</label>
-                            <p>${telefoneFormatado}</p>
-                        </div>
+                        <div class="info-item"><label>Nome</label><p>${user.nome || 'Não informado'}</p></div>
+                        <div class="info-item"><label>Email</label><p>${user.email || 'Não informado'}</p></div>
+                        <div class="info-item"><label>Telefone</label><p>${telefoneFormatado}</p></div>
                     </div>
                     <div class="user-ads-list">
                         <h3>Todos os Anúncios do Usuário</h3>
                 `;
-
-                // 5. Combina e formata os anúncios
-                const allAds = [
-                    ...approvedAds.map(ad => ({ ...ad, status: 'aprovados', date: ad.data_aprovacao || ad.created_at })),
-                    ...otherAds.map(ad => ({ 
-                        ...ad, 
-                        status: ad.aprovado === false ? 'rejeitados' : 'pendentes',
-                        date: ad.aprovado === false ? (ad.data_rejeicao || ad.data) : ad.data
-                        // 'id', 'motivo_rejeicao' e 'rejeicao_vista' já estão incluídos aqui
-                    }))
-                ].sort((a, b) => new Date(b.date + 'Z') - new Date(a.date + 'Z')); // Ordena por data
 
                 if (allAds.length === 0) {
                     modalHTML += `<div id="no-ads-message-modal"><p>Este usuário não possui nenhum anúncio.</p></div>`;
                 } else {
                     modalHTML += `<ul>`;
                     
-                    // (MODIFICADO) Loop de geração de HTML para incluir a caixa de rejeição
                     allAds.forEach(ad => {
-                        let statusText = ad.status.charAt(0).toUpperCase() + ad.status.slice(1);
-                        let statusHTML = `<span class="ad-status ${ad.status}">${statusText}</span>`;
+                        let statusClass = ad.status_aprovacao === 'aprovado' ? 'aprovados' : (ad.status_aprovacao === 'pendente' ? 'pendentes' : 'rejeitados');
+                        let statusText = ad.status_aprovacao.charAt(0).toUpperCase() + ad.status_aprovacao.slice(1);
+                        let statusHTML = `<span class="ad-status ${statusClass}">${statusText}</span>`;
                         
                         let rejectionIconHtml = '';
                         let rejectionBoxHtml = '';
 
-                        // (NOVO) Lógica completa de rejeição
-                        if (ad.status === 'rejeitados' && ad.motivo_rejeicao) {
-                            // O ícone que será clicado
-                            rejectionIconHtml = `
-                                <i class="fas fa-envelope rejection-icon" 
-                                   title="Ver motivo da rejeição"
-                                   data-ad-id="${ad.id}">
-                                </i>
-                            `;
-                            
-                            // O selo de notificação (se não foi visto)
-                            if (ad.rejeicao_vista === false) {
+                        if (statusClass === 'rejeitados' && ad.motivo_rejeicao) {
+                            rejectionIconHtml = `<i class="fas fa-envelope rejection-icon" title="Ver motivo da rejeição" data-ad-id="${ad.id}"></i>`;
+                            if (ad.rejeicao_vista === '0' || ad.rejeicao_vista === false) {
                                 rejectionIconHtml += '<div class="notification-badge"></div>';
                             }
-
-                            // A caixa de motivo (escondida)
                             rejectionBoxHtml = `
                                 <div class="rejection-reason-box" data-reason-for-ad-id="${ad.id}">
                                     <strong>Motivo da Rejeição:</strong>
@@ -1087,7 +1006,7 @@
                         modalHTML += `
                             <li>
                                 <div class="ad-list-item-header">
-                                    <span class="ad-title">${ad.produto}</span>
+                                    <span class="ad-title">${ad.titulo}</span>
                                     <div class="status-wrapper">
                                         ${statusHTML}
                                         ${rejectionIconHtml}
@@ -1101,7 +1020,7 @@
                     modalHTML += `</ul>`;
                 }
                 
-                modalHTML += `</div>`; // Fim de .user-ads-list
+                modalHTML += `</div>`;
                 userDetailsModalBody.innerHTML = modalHTML;
                 
             } catch (err) {
@@ -1112,59 +1031,44 @@
 
 
         document.addEventListener("DOMContentLoaded", async () => {
-             try {
-                const { data: { user } } = await supabase.auth.getUser();
-                if (!user) { throw new Error("Você precisa estar logado para acessar esta página."); }
-                const { data: usuarioData, error } = await supabase.from("usuarios").select("tipo").eq("user_id", user.id).single();
-                if (error || !usuarioData) {
-                    console.error("Erro ao buscar dados do usuário:", error);
-                    throw new Error("Não foi possível verificar suas permissões.");
-                 }
-                if (usuarioData.tipo !== "Administrador") { throw new Error("Acesso restrito! Apenas administradores podem acessar esta página."); }
-            } catch (err) {
-                await showPopup(err.message, 'error');
-                 setTimeout(() => { window.location.replace("index.html"); }, 1500);
+            
+            const usuarioStr = localStorage.getItem("usuarioLogado");
+            if (!usuarioStr) {
+                window.location.replace("Login.html");
                 return;
             }
 
             await listarUsuarios();
 
-            // Listener da busca (chama a função de filtro unificada)
             document.getElementById("searchInput").addEventListener("input", filterUsers);
             
-            // NOVO: Listener do botão "Voltar"
             document.getElementById("admin-back-btn").addEventListener("click", (e) => {
                 e.preventDefault();
-                history.back(); // Volta para a página anterior (ex: Dashboard)
+                history.back(); 
             });
             
-            // ***** MUDANÇA AQUI: LÓGICA DO FILTRO DE TIPO CORRIGIDA (sem classe, sem toasts) *****
             document.getElementById("tipo-filter-btn").addEventListener("click", () => {
                 const filterIcon = document.getElementById("tipo-filter-btn");
                 
                 if (currentTipoFilter === 'Todos') {
                     currentTipoFilter = 'Comum';
-                    filterIcon.style.color = '#3ac0dd'; // Cor CIANO (ativo)
+                    filterIcon.style.color = '#3ac0dd';
                     filterIcon.title = "Filtrando por: Comum";
-                    // showToast("Filtrando por: Comuns", "info"); // REMOVIDO
                 } else if (currentTipoFilter === 'Comum') {
                     currentTipoFilter = 'Administrador';
-                    filterIcon.style.color = '#3ac0dd'; // Cor CIANO (ativo)
+                    filterIcon.style.color = '#3ac0dd';
                     filterIcon.title = "Filtrando por: Administrador";
-                    // showToast("Filtrando por: Administradores", "info"); // REMOVIDO
-                } else { // Era 'Administrador'
+                } else {
                     currentTipoFilter = 'Todos';
-                    filterIcon.style.color = '#ccc'; // Cor cinza (inativo)
+                    filterIcon.style.color = '#ccc';
                     filterIcon.title = "Filtrar por tipo";
-                    // showToast("Mostrando todos os tipos", "info"); // REMOVIDO
                 }
                 
-                filterUsers(); // Re-filtra a lista
+                filterUsers();
             });
 
-            // Listener de Ações da Tabela
             document.querySelector("tbody").addEventListener("click", async (e) => {
-                 const target = e.target;
+                const target = e.target;
                 const actionLink = target.closest('.action-icon');
                 if (!actionLink) return;
 
@@ -1173,56 +1077,55 @@
                 const tr = actionLink.closest("tr");
                 if (!tr) return;
                 
-                const internalId = tr.dataset.userId; // Para Salvar/Excluir (int)
-                const uuid = tr.dataset.userIdUuid;    // Para Ver Detalhes (uuid)
+                const internalId = tr.dataset.userId; 
 
-                // --- AÇÃO: VER DETALHES ---
                 if (actionLink.classList.contains("ver")) {
-                    openUserDetailsModal(uuid);
+                    openUserDetailsModal(internalId);
                 }
 
-                // --- AÇÃO: ALTERAR ---
                 if (actionLink.classList.contains("alterar")) {
                     tr.querySelectorAll("span").forEach(el => el.style.display = "none");
-                    
                     const inputs = tr.querySelectorAll(".input_edicao");
                     inputs.forEach(el => el.style.display = "inline-block");
                     
-                    // Foca no primeiro input (Nome)
                     if (inputs[0]) {
                         inputs[0].focus(); 
-                        inputs[0].select(); // Seleciona o texto para facilitar a digitação
+                        inputs[0].select(); 
                     }
                     
-                    actionLink.style.display = "none"; // Esconde "Alterar"
-                    tr.querySelector(".action-icon.ver").style.display = "none"; // Esconde "Ver"
-                    tr.querySelector(".action-icon.excluir").style.display = "none"; // Esconde "Excluir"
-                    tr.querySelector(".action-icon.salvar").style.display = "inline-block"; // Mostra "Salvar"
+                    actionLink.style.display = "none";
+                    tr.querySelector(".action-icon.ver").style.display = "none"; 
+                    tr.querySelector(".action-icon.excluir").style.display = "none"; 
+                    tr.querySelector(".action-icon.salvar").style.display = "inline-block";
                 }
 
-                // --- AÇÃO: SALVAR ---
                 if (actionLink.classList.contains("salvar")) {
                     const inputs = tr.querySelectorAll(".input_edicao");
                     const updatedData = {
+                        id: internalId,
                         nome: inputs[0].value.trim(),
                         email: inputs[1].value.trim(),
                         tipo: inputs[2].value
                     };
+
                     if (!updatedData.nome || !updatedData.email) {
                         await showPopup("Nome e E-mail não podem ser vazios.", 'error');
                         return;
                     }
+
                     actionLink.style.pointerEvents = 'none';
                     actionLink.style.opacity = '0.5';
                     
-                    const { error } = await supabase.from("usuarios").update(updatedData).eq("id", internalId); 
-                    
-                    actionLink.style.pointerEvents = 'auto';
-                    actionLink.style.opacity = '1';
+                    try {
+                        const response = await fetch('admin_atualizar_usuario.php', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(updatedData)
+                        });
+                        const data = await response.json();
+                        
+                        if (!data.status) throw new Error(data.mensagem);
 
-                    if (error) {
-                        await showPopup(`Erro ao atualizar: ${error.message}`, 'error');
-                    } else {
                         showToast("Usuário atualizado com sucesso!");
                         tr.querySelectorAll("span")[0].textContent = updatedData.nome;
                         tr.querySelectorAll("span")[1].textContent = updatedData.email;
@@ -1230,40 +1133,45 @@
                         tr.querySelectorAll("span").forEach(el => el.style.display = "inline-block");
                         tr.querySelectorAll(".input_edicao").forEach(el => el.style.display = "none");
                         tr.querySelector(".action-icon.alterar").style.display = "inline-block";
-                        tr.querySelector(".action-icon.ver").style.display = "inline-block"; // Mostra "Ver"
-                        tr.querySelector(".action-icon.excluir").style.display = "inline-block"; // Mostra "Excluir"
-                        actionLink.style.display = "none"; // Esconde "Salvar"
+                        tr.querySelector(".action-icon.ver").style.display = "inline-block"; 
+                        tr.querySelector(".action-icon.excluir").style.display = "inline-block"; 
+                        actionLink.style.display = "none"; 
                         
-                        // Atualiza o array local
                         const userIndex = allUsers.findIndex(u => u.id == internalId);
                         if (userIndex > -1) {
                             allUsers[userIndex] = { ...allUsers[userIndex], ...updatedData };
                         }
+                    } catch(error) {
+                        await showPopup(`Erro ao atualizar: ${error.message}`, 'error');
+                    } finally {
+                        actionLink.style.pointerEvents = 'auto';
+                        actionLink.style.opacity = '1';
                     }
                 }
 
-                // --- AÇÃO: EXCLUIR ---
                 if (actionLink.classList.contains("excluir")) {
                     const confirmed = await showPopup("Deseja realmente excluir este usuário?", 'confirm');
                     if (confirmed) {
-                        const { error } = await supabase.from("usuarios").delete().eq("id", internalId); 
-                        if (error) {
-                            await showPopup(`Erro ao excluir: ${error.message}`, 'error');
-                        } else {
+                        try {
+                            const response = await fetch('admin_excluir_usuario.php', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ id: internalId })
+                            });
+                            const data = await response.json();
+
+                            if (!data.status) throw new Error(data.mensagem);
+
                             showToast("Usuário excluído com sucesso.");
-                             allUsers = allUsers.filter(u => u.id != internalId);
-                             filterUsers(); // Atualiza a visualização com os filtros atuais
-                             const totalPages = Math.ceil(filteredUsers.length / rowsPerPage);
-                             if (currentPage > totalPages && totalPages > 0) {
-                                currentPage = totalPages;
-                             }
-                             displayPage(); // Re-renderiza a página atual
+                            allUsers = allUsers.filter(u => u.id != internalId);
+                            filterUsers(); 
+                        } catch(error) {
+                            await showPopup(`Erro ao excluir: ${error.message}`, 'error');
                         }
                     }
                 }
              });
              
-            // --- (NOVO) LISTENER PARA CLIQUE NO ÍCONE DE MOTIVO (DENTRO DO MODAL) ---
             userDetailsModalBody.addEventListener('click', async (e) => {
                 const icon = e.target.closest('.rejection-icon');
                 if (!icon) return;
@@ -1277,29 +1185,31 @@
                     reasonBox.classList.toggle('visible');
                 }
 
-                // Se o badge existia, remove-o e atualiza o DB
                 if (badge) {
                     badge.remove();
-                    // Atualiza o status 'rejeicao_vista' no banco de dados (tabela 'produtos')
-                    const { error: updateError } = await supabase
-                        .from('produtos')
-                        .update({ rejeicao_vista: true })
-                        .eq('id', adId);
-                    
-                    if (updateError) {
-                        console.error("Erro ao marcar rejeição como vista:", updateError);
-                        // Não incomoda o usuário, apenas loga o erro
-                    }
+                    await fetch('admin_marcar_rejeicao_vista.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ id: adId })
+                    });
                 }
             });
              
-            // --- LISTENERS PARA FECHAR O MODAL DE DETALHES ---
             const closeModal = () => userDetailsModal.classList.remove('visible');
             userDetailsModalClose.addEventListener('click', closeModal);
             userDetailsModal.addEventListener('click', (e) => {
                 if (e.target === userDetailsModal) closeModal();
             });
 
+            // Logout
+            const logoutBtns = document.querySelectorAll('.menu-item-logout');
+            logoutBtns.forEach(btn => btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                if(confirm("Tem certeza que deseja sair?")) {
+                    localStorage.removeItem("usuarioLogado");
+                    window.location.replace("index.html");
+                }
+            }));
         });
     </script>
 </body>

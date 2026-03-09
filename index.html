@@ -356,31 +356,54 @@
   <button id="btnTopo" onclick="rolarParaTopo()"><img class="up" src="IMG/up-arrow.png"></button>
 
   <script>
-    function rolarParaTopo() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
-
-    document.addEventListener('DOMContentLoaded', () => {
-        const menuToggle = document.getElementById('menu-toggle');
-        const mobileNav = document.getElementById('mobile-nav');
-        const navOverlay = document.getElementById('nav-overlay');
-        const navLinks = document.querySelectorAll('.mobile-nav-links a');
-
-        function closeMenu() {
-            mobileNav.classList.remove('is-open');
-            navOverlay.classList.remove('is-open');
+    document.addEventListener('DOMContentLoaded', async () => {
+        const usuarioLogado = localStorage.getItem("usuarioLogado");
+        const loginLink = document.getElementById("login-link");
+        const perfilLink = document.getElementById("perfil-link");
+    
+        if (usuarioLogado) {
+            const user = JSON.parse(usuarioLogado);
+            if (loginLink) loginLink.style.display = "none";
+            if (perfilLink) {
+                perfilLink.style.display = "block";
+                perfilLink.textContent = user.tipo === "Administrador" ? "Painel" : "Meu Perfil";
+                perfilLink.href = user.tipo === "Administrador" ? "dashboard.html" : "perfil.html";
+            }
         }
-
-        menuToggle.addEventListener('click', () => {
-            mobileNav.classList.add('is-open');
-            navOverlay.classList.add('is-open');
-        });
-
-        navOverlay.addEventListener('click', closeMenu);
-        
-        navLinks.forEach(link => {
-            link.addEventListener('click', closeMenu);
-        });
+    
+        const gridProdutos = document.getElementById("product-grid");
+        if (!gridProdutos) return;
+    
+        try {
+            const response = await fetch("listar_anuncios.php");
+            const data = await response.json();
+    
+            if (data.status === true && data.produtos.length > 0) {
+                gridProdutos.innerHTML = "";
+                const produtosRecentes = data.produtos.slice(0, 4);
+    
+                produtosRecentes.forEach(produto => {
+                    const card = document.createElement("div");
+                    card.className = "product-card";
+                    const imagemSrc = produto.imagem_0 ? produto.imagem_0 : "IMG/placeholder.png";
+                    const precoFormatado = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(produto.preco);
+    
+                    card.innerHTML = `
+                        <img src="${imagemSrc}" alt="${produto.titulo}">
+                        <h3>${produto.titulo}</h3>
+                        <p>${precoFormatado}</p>
+                        <a href="MarketPlace.html?id=${produto.id}" class="btn-comprar">go to marketplace</a>
+                    `;
+                    gridProdutos.appendChild(card);
+                });
+            } else {
+                gridProdutos.innerHTML = "<p>Nenhum produto disponível no momento.</p>";
+            }
+        } catch (error) {
+            gridProdutos.innerHTML = "<p>Erro ao carregar os produtos.</p>";
+        }
     });
-  </script>
+    </script>
 
 <script>
   if ('serviceWorker' in navigator) {
@@ -478,7 +501,7 @@
   </script>
 <script src="JS/dolar-api.js" defer></script>
   <script src="JS/weather-api.js" defer></script>
-  <script src="JS/theme-toggle.js"></script>
+
 
 </body>
 </html>
