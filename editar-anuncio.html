@@ -256,7 +256,7 @@
 
             // --- CARREGAR DADOS DO ANÚNCIO (MySQL) ---
             try {
-                const response = await fetch(`buscar_produto.php?id=${anuncioId}`);
+                const response = await fetch(`buscar_anuncio_edicao.php?id=${anuncioId}`);
                 const data = await response.json();
 
                 if (data.status === true) {

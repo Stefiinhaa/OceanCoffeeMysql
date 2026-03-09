@@ -196,55 +196,37 @@
         </div>
     </nav>
 
-    <script type="module">
-        import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.44.1/+esm";
-        
-        const supabaseUrl = "https://uldxazlnnpuoxfzsovmu.supabase.co";
-        const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVsZHhhemxubnB1b3hmenNvdm11Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg3Mjg2NzgsImV4cCI6MjA2NDMwNDY3OH0.fyToys8_muc1XyUebJ19gxGEkCVM_cXg80UJR894xQY";
-        const supabase = createClient(supabaseUrl, supabaseKey);
-
-        async function protegerPagina() {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (!session) { window.location.replace('Login.html'); }
+    <script>
+        function protegerPagina() {
+            const usuarioStr = localStorage.getItem("usuarioLogado");
+            if (!usuarioStr) { window.location.replace('Login.html'); }
+            return JSON.parse(usuarioStr);
         }
-        protegerPagina();
+        const user = protegerPagina();
         
         function ensurePopupContainer() { let c = document.getElementById('popup-container'); if (!c) { c = document.createElement('div'); c.id = 'popup-container'; c.className = 'popup-container'; document.body.appendChild(c); } return c; }
         function showPopup(message, type = 'info', duration = 3500) { const c = ensurePopupContainer(); const p = document.createElement('div'); p.className = `popup ${type}`; let i = 'fas fa-info-circle'; if (type === 'success') i = 'fas fa-check-circle'; if (type === 'error') i = 'fas fa-times-circle'; p.innerHTML = `<i class="${i}"></i> <div>${message}</div>`; c.prepend(p); requestAnimationFrame(() => p.classList.add('show')); setTimeout(() => { p.classList.remove('show'); p.addEventListener('transitionend', () => p.remove()); }, duration); }
-        function showConfirmationPopup(title, message) { return new Promise((resolve) => { const o = document.createElement('div'); o.className = 'confirmation-overlay'; o.innerHTML = `<div class="confirmation-modal"><h3>${title}</h3><p>${message}</p><div class="confirmation-actions"><button class="confirmation-btn-cancel">Cancelar</button><button class="confirmation-btn-confirm">Sim, Sair</button></div></div>`; const c = (r) => { o.classList.remove('show'); o.addEventListener('transitionend', () => { o.remove(); resolve(r); }); }; o.querySelector('.confirmation-btn-cancel').addEventListener('click', () => c(false)); o.querySelector('.confirmation-btn-confirm').addEventListener('click', () => c(true)); document.body.appendChild(o); requestAnimationFrame(() => o.classList.add('show')); }); }
 
-
-        document.addEventListener("DOMContentLoaded", async () => {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return;
-            
-            const { data: profile } = await supabase.from("usuarios").select("nome, email").eq("user_id", user.id).single();
-            if (profile) {
-                const firstName = profile.nome.split(' ')[0];
+        document.addEventListener("DOMContentLoaded", () => {
+            // Preenche os dados visuais
+            if (user) {
+                const firstName = user.nome.split(' ')[0];
                 document.getElementById('welcome-message').textContent = firstName;
                 document.getElementById('mobile-welcome-message').textContent = `Olá, ${firstName}!`;
-                document.getElementById('user-email-sidebar').textContent = profile.email;
-                document.getElementById('avatar-inicial').textContent = profile.nome.charAt(0).toUpperCase();
+                document.getElementById('user-email-sidebar').textContent = user.email;
+                document.getElementById('avatar-inicial').textContent = user.nome.charAt(0).toUpperCase();
             }
             
             const form = document.getElementById('anuncioForm');
             const precoInput = document.getElementById('preco');
             const telefoneInput = document.getElementById('telefone');
             
-            // --- LÓGICA DE FORMATAÇÃO DE PREÇO (ESTILO BANCO) ---
             precoInput.addEventListener('input', (e) => {
                 let value = e.target.value.replace(/\D/g, '');
-                value = (parseInt(value, 10) / 100).toLocaleString('pt-BR', {
-                    style: 'currency',
-                    currency: 'BRL'
-                });
+                value = (parseInt(value, 10) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
                 e.target.value = value;
             });
-            precoInput.addEventListener('focus', (e) => {
-                if (!e.target.value) {
-                    e.target.value = 'R$ 0,00';
-                }
-            });
+            precoInput.addEventListener('focus', (e) => { if (!e.target.value) e.target.value = 'R$ 0,00'; });
 
             IMask(telefoneInput, { mask: [ { mask: '(00) 0000-0000' }, { mask: '(00) 00000-0000' } ] });
 
@@ -271,41 +253,44 @@
                 btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Publicando...';
 
                 try {
-                    const currentUser = (await supabase.auth.getUser()).data.user;
-                    if (!currentUser) throw new Error("Sessão inválida. Faça o login novamente.");
-                    
-                    const currentProfile = (await supabase.from("usuarios").select("nome").eq("user_id", currentUser.id).single()).data;
-                    if (!currentProfile) throw new Error("Não foi possível encontrar seu perfil.");
-
-                    const produto = document.getElementById("produto").value.trim();
+                    const titulo = document.getElementById("produto").value.trim();
                     const local = document.getElementById("local").value.trim();
-                    const precoNumerico = parseFloat(precoInput.value.replace('R$', '').replace(/\./g, '').replace(',', '.'));
+                    const precoNumerico = precoInput.value.replace('R$', '').replace(/\./g, '').replace(',', '.').trim();
                     const descricao = document.getElementById("descricao").value.trim();
                     const contato = telefoneInput.value.replace(/\D/g, '');
 
-                    if (!produto || !local || isNaN(precoNumerico) || precoNumerico <= 0 || !descricao || !contato) throw new Error("Preencha todos os campos obrigatórios com valores válidos.");
+                    if (!titulo || !local || !descricao || !contato) throw new Error("Preencha todos os campos obrigatórios.");
                     
-                    const files = [document.getElementById('imagem1').files[0], document.getElementById('imagem2').files[0], document.getElementById('imagem3').files[0]].filter(Boolean);
-                    if (files.length === 0) throw new Error("Selecione pelo menos a Imagem Principal.");
+                    const preview1 = document.getElementById('preview1').src;
+                    if (!preview1 || preview1 === window.location.href) throw new Error("Selecione pelo menos a Imagem Principal.");
+
+                    // Prepara os dados (FormData) para enviar ao salvar_anuncio.php
+                    const formData = new FormData();
+                    formData.append('usuario_id', user.id);
+                    formData.append('titulo', titulo);
+                    formData.append('descricao', descricao);
+                    formData.append('preco', precoNumerico);
+                    formData.append('local', local);
+                    formData.append('contato', contato);
                     
-                    const imagens = [];
-                    for (const file of files) {
-                        const sanitizedName = file.name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '_');
-                        const path = `produtos/${currentUser.id}/${Date.now()}_${sanitizedName}`;
-                        const { error: uploadError } = await supabase.storage.from('imagens').upload(path, file);
-                        if (uploadError) throw new Error(`Erro no upload: ${uploadError.message}`);
-                        imagens.push(supabase.storage.from('imagens').getPublicUrl(path).data.publicUrl);
-                    }
-                    
-                    const { error: insertError } = await supabase.from("produtos").insert({
-                        user_id: currentUser.id, nome_usuario: currentProfile.nome,
-                        produto, local, preco: precoNumerico, descricao, contato, imagens,
-                        data: new Date().toISOString()
+                    // Só envia as imagens se elas tiverem sido preenchidas (em Base64)
+                    if(document.getElementById('preview1').src && document.getElementById('preview1').src !== window.location.href) formData.append('imagem_0', document.getElementById('preview1').src);
+                    if(document.getElementById('preview2').src && document.getElementById('preview2').src !== window.location.href) formData.append('imagem_1', document.getElementById('preview2').src);
+                    if(document.getElementById('preview3').src && document.getElementById('preview3').src !== window.location.href) formData.append('imagem_2', document.getElementById('preview3').src);
+
+                    const response = await fetch('salvar_anuncio.php', {
+                        method: 'POST',
+                        body: formData
                     });
-                    if (insertError) throw insertError;
                     
-                    showPopup("Anúncio enviado para análise com sucesso!", "success");
-                    setTimeout(() => window.location.href = "meus-anuncios.html", 2500);
+                    const data = await response.json();
+                    
+                    if (data.status === true) {
+                        showPopup("Anúncio enviado para análise com sucesso!", "success");
+                        setTimeout(() => window.location.href = "meus-anuncios.html", 2500);
+                    } else {
+                        throw new Error(data.mensagem);
+                    }
 
                 } catch (err) {
                     showPopup(err.message, 'error');
@@ -315,31 +300,16 @@
                 }
             });
 
-            async function handleLogout(e) {
+            // Logout
+            const handleLogout = (e) => {
                 e.preventDefault(); 
-                const userConfirmed = await showConfirmationPopup('Confirmar Saída', 'Você tem certeza que deseja sair da sua conta?');
-                if (userConfirmed) {
-                    showPopup("Saindo...", 'info', 1500);
-                    await supabase.auth.signOut();
-                    setTimeout(() => window.location.replace("index.html"), 500);
+                if(confirm('Tem certeza que deseja sair?')) {
+                    localStorage.removeItem("usuarioLogado");
+                    window.location.replace("index.html");
                 }
-            }
+            };
             document.getElementById('logout-btn').addEventListener('click', handleLogout);
             document.getElementById('mobile-logout-btn').addEventListener('click', handleLogout);
-            
-            const menuToggle = document.getElementById('menu-toggle');
-            const mobileNav = document.getElementById('mobile-nav');
-            const navOverlay = document.getElementById('nav-overlay');
-
-            function closeMenu() {
-                mobileNav.classList.remove('is-open');
-                navOverlay.classList.remove('is-open');
-            }
-            menuToggle.addEventListener('click', () => {
-                mobileNav.classList.add('is-open');
-                navOverlay.classList.add('is-open');
-            });
-            navOverlay.addEventListener('click', closeMenu);
         });
     </script>
 </body>

@@ -7,38 +7,19 @@
     <link rel="icon" href="IMG/Loginho2.png" type="image/png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
-        /* Estilos unificados baseados na sua tela de login */
-        body { display: flex; justify-content: center; align-items: center; height: 100vh; background-image: url('IMG/Fundo.png'); background-size: cover; background-position: center; font-family: 'Segoe UI', sans-serif; }
+        body { display: flex; justify-content: center; align-items: center; height: 100vh; background-image: url('IMG/Fundo.png'); background-size: cover; background-position: center; font-family: 'Segoe UI', sans-serif; margin: 0;}
         .card { background-color: rgba(255, 255, 255, 0.95); padding: 40px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); width: 100%; max-width: 450px; text-align: center; backdrop-filter: blur(5px); }
         .card img { max-width: 150px; margin-bottom: 20px; }
         .card h1 { font-size: 2rem; font-weight: 600; margin-bottom: 15px; color: #333; }
         .card p.instructions { color: #555; margin-bottom: 25px; line-height: 1.5; }
-
-        /* --- CORREÇÃO DE ALINHAMENTO APLICADA AQUI --- */
-        #reset-form {
-            display: flex;
-            flex-direction: column;
-            gap: 20px; /* Controla o espaço entre o input e o botão */
-        }
-        .input-field { 
-            width: 100%; 
-            padding: 12px 15px; 
-            border: 1px solid #ccc; 
-            border-radius: 8px; 
-            font-size: 1rem; 
-            box-sizing: border-box; /* Garante que o padding não afete a largura total */
-            margin-bottom: 0; /* Remove a margem antiga */
-        }
-        /* --- FIM DA CORREÇÃO --- */
-
+        #reset-form { display: flex; flex-direction: column; gap: 20px; }
+        .input-field { width: 100%; padding: 12px 15px; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; box-sizing: border-box; margin-bottom: 0; }
         .btn-submit { width: 100%; padding: 12px; border: none; border-radius: 8px; background: linear-gradient(to right, #0047a3, #3ac0dd); color: white; font-size: 1.1rem; font-weight: bold; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; }
         .btn-submit:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(0, 71, 163, 0.4); }
         .btn-submit:disabled { background: #aaa; cursor: not-allowed; transform: none; box-shadow: none; }
         .links { margin-top: 20px; color: #555; }
         .links a { color: #0047a3; font-weight: 600; text-decoration: none; }
         .links a:hover { text-decoration: underline; }
-
-        /* Pop-ups */
         .popup-container { position: fixed; top: 20px; right: 20px; z-index: 10000; display: flex; flex-direction: column; gap: 12px; }
         .popup { display: flex; align-items: center; min-width: 300px; padding: 16px 22px; border-radius: 8px; color: white; font-size: 0.95rem; font-weight: 500; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15); transform: translateX(calc(100% + 20px)); opacity: 0; transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1); }
         .popup.show { transform: translateX(0); opacity: 1; }
@@ -51,24 +32,17 @@
     <div class="card">
         <img src="IMG/Loginho2.png" alt="Ocean Coffee Brasil">
         <h1>Recuperar Senha</h1>
-        <p class="instructions">Digite seu e-mail abaixo e enviaremos um link para você redefinir sua senha.</p>
+        <p class="instructions">Digite seu e-mail abaixo. Se a conta existir, será redirecionado para criar uma nova senha.</p>
         <form id="reset-form">
             <input class="input-field" type="email" placeholder="Seu e-mail de cadastro" id="email" required>
-            <button type="submit" class="btn-submit" id="submit-button">Enviar Link</button>
+            <button type="submit" class="btn-submit" id="submit-button">Verificar Conta</button>
         </form>
         <div class="links">
             <p>Lembrou a senha? <a href="Login.html">Voltar para o Login</a></p>
         </div>
     </div>
 
-    <script type="module">
-        import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.44.1/+esm";
-        
-        const supabaseUrl = "https://uldxazlnnpuoxfzsovmu.supabase.co";
-        const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVsZHhhemxubnB1b3hmenNvdm11Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg3Mjg2NzgsImV4cCI6MjA2NDMwNDY3OH0.fyToys8_muc1XyUebJ19gxGEkCVM_cXg80UJR894xQY";
-        const supabase = createClient(supabaseUrl, supabaseKey);
-
-        // Funções de Pop-up
+    <script>
         function ensurePopupContainer() { let c = document.getElementById('popup-container'); if (!c) { c = document.createElement('div'); c.id = 'popup-container'; c.className = 'popup-container'; document.body.appendChild(c); } return c; }
         function showPopup(message, type = 'info', duration = 4000) { const c = ensurePopupContainer(); const p = document.createElement('div'); p.className = `popup ${type}`; let i = 'fas fa-info-circle'; if (type === 'success') i = 'fas fa-check-circle'; if (type === 'error') i = 'fas fa-times-circle'; p.innerHTML = `<i class="${i}"></i> <div>${message}</div>`; c.prepend(p); requestAnimationFrame(() => p.classList.add('show')); setTimeout(() => { p.classList.remove('show'); p.addEventListener('transitionend', () => p.remove()); }, duration); }
 
@@ -79,26 +53,31 @@
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             submitButton.disabled = true;
-            submitButton.textContent = 'Enviando...';
-            
-            const pageURL = window.location.origin + window.location.pathname.replace('esqueci-senha.html', 'redefinir.html');
+            submitButton.textContent = 'Verificando...';
 
             try {
-                const { error } = await supabase.auth.resetPasswordForEmail(emailInput.value, {
-                    redirectTo: pageURL,
+                // Chama o nosso ficheiro PHP local
+                const response = await fetch('verificar_email.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: emailInput.value.trim() })
                 });
 
-                if (error) throw error;
+                const data = await response.json();
 
-                showPopup('Link de recuperação enviado! Verifique seu e-mail (inclusive a caixa de spam).', 'success');
-                emailInput.value = '';
-
+                if (data.status === true) {
+                    showPopup('Conta encontrada! Redirecionando...', 'success');
+                    localStorage.setItem('emailRecuperacao', emailInput.value.trim());
+                    setTimeout(() => {
+                        window.location.href = 'redefinir.html';
+                    }, 1500);
+                } else {
+                    throw new Error(data.mensagem);
+                }
             } catch (error) {
-                console.error("Erro ao enviar e-mail:", error);
-                showPopup(`Erro: ${error.message}`, 'error');
-            } finally {
+                showPopup(error.message, 'error');
                 submitButton.disabled = false;
-                submitButton.textContent = 'Enviar Link';
+                submitButton.textContent = 'Verificar Conta';
             }
         });
     </script>

@@ -357,21 +357,20 @@
 
   <script>
     document.addEventListener('DOMContentLoaded', async () => {
+        // 1. GESTÃO DE MENU (Login/Perfil)
         const usuarioLogado = localStorage.getItem("usuarioLogado");
-        const loginLink = document.getElementById("login-link");
-        const perfilLink = document.getElementById("perfil-link");
-    
+        const loginLink = document.querySelector('nav.navbar-center a[href="Login.html"]');
+        
         if (usuarioLogado) {
             const user = JSON.parse(usuarioLogado);
-            if (loginLink) loginLink.style.display = "none";
-            if (perfilLink) {
-                perfilLink.style.display = "block";
-                perfilLink.textContent = user.tipo === "Administrador" ? "Painel" : "Meu Perfil";
-                perfilLink.href = user.tipo === "Administrador" ? "dashboard.html" : "perfil.html";
+            if (loginLink) {
+                loginLink.textContent = user.tipo === "Administrador" ? "Painel" : "Meu Perfil";
+                loginLink.href = user.tipo === "Administrador" ? "dashboard.html" : "perfil.html";
             }
         }
     
-        const gridProdutos = document.getElementById("product-grid");
+        // 2. CARREGAR EQUIPAMENTOS EM DESTAQUE NA PÁGINA INICIAL
+        const gridProdutos = document.getElementById("recent-products-grid"); // O ID correto que está no HTML
         if (!gridProdutos) return;
     
         try {
@@ -380,21 +379,28 @@
     
             if (data.status === true && data.produtos.length > 0) {
                 gridProdutos.innerHTML = "";
-                const produtosRecentes = data.produtos.slice(0, 4);
+                const produtosRecentes = data.produtos.slice(0, 3); // Limita a 3 produtos
     
-                produtosRecentes.forEach(produto => {
-                    const card = document.createElement("div");
-                    card.className = "product-card";
-                    const imagemSrc = produto.imagem_0 ? produto.imagem_0 : "IMG/placeholder.png";
-                    const precoFormatado = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(produto.preco);
-    
-                    card.innerHTML = `
-                        <img src="${imagemSrc}" alt="${produto.titulo}">
-                        <h3>${produto.titulo}</h3>
-                        <p>${precoFormatado}</p>
-                        <a href="MarketPlace.html?id=${produto.id}" class="btn-comprar">go to marketplace</a>
+                produtosRecentes.forEach(product => {
+                    const priceFormatted = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(product.preco);
+                    const productCard = `
+                        <article class="equipamentos-destaque-product-card">
+                            <a href="MarketPlace.html?id=${product.id}" class="equipamentos-destaque-product-card__image-container">
+                                <img src="${product.imagem_0 || 'IMG/placeholder.png'}" alt="${product.titulo}" class="equipamentos-destaque-product-card__image">
+                            </a>
+                            <div class="equipamentos-destaque-product-card__content">
+                                <h3 class="equipamentos-destaque-product-card__title">
+                                   <a href="MarketPlace.html?id=${product.id}" style="text-decoration: none; color: inherit;">${product.titulo}</a>
+                                </h3>
+                                <p class="equipamentos-destaque-product-card__description">${product.descricao.substring(0, 100)}...</p>
+                                <div class="equipamentos-destaque-product-card__footer">
+                                    <span class="equipamentos-destaque-product-card__price">${priceFormatted}</span>
+                                    <a href="MarketPlace.html?id=${product.id}" class="equipamentos-destaque-product-card__button">Saiba Mais</a>
+                                </div>
+                            </div>
+                        </article>
                     `;
-                    gridProdutos.appendChild(card);
+                    gridProdutos.innerHTML += productCard;
                 });
             } else {
                 gridProdutos.innerHTML = "<p>Nenhum produto disponível no momento.</p>";
@@ -456,49 +462,7 @@
   });
 </script>
 
-  <script type="module">
-    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.44.1/+esm";
-    const supabaseUrl = "https://uldxazlnnpuoxfzsovmu.supabase.co";
-    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVsZHhhemxubnB1b3hmenNvdm11Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg3Mjg2NzgsImV4cCI6MjA2NDMwNDY3OH0.fyToys8_muc1XyUebJ19gxGEkCVM_cXg80UJR894xQY";
-    const supabase = createClient(supabaseUrl, supabaseKey);
 
-    async function loadRecentProducts() {
-        const grid = document.getElementById('recent-products-grid');
-        if (!grid) return;
-        const { data, error } = await supabase.from('aprovados').select('*').order('data_aprovacao', { ascending: false }).limit(3);
-        if (error) {
-            console.error('Erro ao buscar produtos recentes:', error);
-            grid.innerHTML = '<p>Não foi possível carregar os produtos no momento.</p>';
-            return;
-        }
-        if (data.length === 0) {
-            grid.innerHTML = '<p>Nenhum produto em destaque no momento.</p>';
-            return;
-        }
-        grid.innerHTML = '';
-        data.forEach(product => {
-            const productCard = `
-                <article class="equipamentos-destaque-product-card">
-                    <a href="MarketPlace.html?id=${product.id}" class="equipamentos-destaque-product-card__image-container">
-                        <img src="${product.imagens[0] || 'IMG/placeholder.png'}" alt="${product.produto}" class="equipamentos-destaque-product-card__image">
-                    </a>
-                    <div class="equipamentos-destaque-product-card__content">
-                        <h3 class="equipamentos-destaque-product-card__title">
-                           <a href="MarketPlace.html?id=${product.id}" style="text-decoration: none; color: inherit;">${product.produto}</a>
-                        </h3>
-                        <p class="equipamentos-destaque-product-card__description">${product.descricao.substring(0, 100)}...</p>
-                        <div class="equipamentos-destaque-product-card__footer">
-                            <span class="equipamentos-destaque-product-card__price">${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(product.preco)}</span>
-                            <a href="MarketPlace.html?id=${product.id}" class="equipamentos-destaque-product-card__button">Saiba Mais</a>
-                        </div>
-                    </div>
-                </article>
-            `;
-            grid.innerHTML += productCard;
-        });
-    }
-    document.addEventListener('DOMContentLoaded', loadRecentProducts);
-  </script>
 <script src="JS/dolar-api.js" defer></script>
   <script src="JS/weather-api.js" defer></script>
 

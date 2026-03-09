@@ -71,13 +71,7 @@
         </div>
     </div>
 
-    <script type="module">
-        import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
-
-        const supabaseUrl = "https://uldxazlnnpuoxfzsovmu.supabase.co";
-        const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVsZHhhemxubnB1b3hmenNvdm11Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg3Mjg2NzgsImV4cCI6MjA2NDMwNDY3OH0.fyToys8_muc1XyUebJ19gxGEkCVM_cXg80UJR894xQY";
-        const supabase = createClient(supabaseUrl, supabaseKey);
-
+    <script>
         function showPopup(message, type = 'error') {
             return new Promise((resolve) => {
                 const overlay = document.createElement('div');
@@ -96,10 +90,8 @@
         document.querySelector('.toggle-password').addEventListener('click', function () {
             const passwordInput = document.getElementById('senha');
             const icon = this;
-            
             const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
             passwordInput.setAttribute('type', type);
-            
             icon.classList.toggle('fa-eye');
             icon.classList.toggle('fa-eye-slash');
         });
@@ -109,38 +101,36 @@
             const btn = e.target.querySelector("button");
             btn.disabled = true;
             btn.textContent = "Entrando...";
+            
             const email = document.getElementById("email").value.trim();
             const senha = document.getElementById("senha").value;
 
             try {
-                const { data, error: authError } = await supabase.auth.signInWithPassword({ email, password: senha });
-                if (authError) {
-                    if (authError.message.includes("Email not confirmed")) {
-                        throw new Error("Seu email ainda não foi confirmado. Verifique sua caixa de entrada.");
-                    }
-                    throw new Error("Email ou senha inválidos.");
-                }
-                if (!data.user) { throw new Error("Falha na autenticação, usuário não retornado."); }
+                const response = await fetch("processar_login.php", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ email: email, senha: senha })
+                });
                 
-                const { data: profile, error: profileError } = await supabase.from("usuarios").select("tipo, nome").eq("user_id", data.user.id).single();
-                if (profileError) {
-                    console.error("DEBUG: Erro ao buscar perfil na tabela 'usuarios':", profileError);
-                    throw new Error("Não foi possível encontrar um perfil para este usuário.");
+                const data = await response.json();
+
+                if (data.status === true) {
+                    // Guarda o utilizador no LocalStorage
+                    localStorage.setItem("usuarioLogado", JSON.stringify(data.usuario));
+                    btn.textContent = "Sucesso!";
+                    
+                    setTimeout(() => {
+                        if (data.usuario.tipo === "Administrador") {
+                            localStorage.setItem("bemVindo", data.usuario.nome);
+                            window.location.replace("dashboard.html");
+                        } else {
+                            window.location.replace("perfil.html");
+                        }
+                    }, 500);
+                } else {
+                    throw new Error(data.mensagem || "Erro de autenticação.");
                 }
-                if (!profile) { throw new Error("Perfil de usuário não encontrado no banco de dados."); }
-
-                btn.textContent = "Sucesso!";
-                setTimeout(() => {
-                    if (profile.tipo === "Administrador") {
-                        localStorage.setItem("bemVindo", profile.nome);
-                        window.location.replace("dashboard.html");
-                    } else {
-                        window.location.replace("perfil.html");
-                    }
-                }, 500);
-
             } catch (err) {
-                console.error("DEBUG: Erro final no bloco de login:", err);
                 await showPopup(err.message, 'error');
                 btn.disabled = false;
                 btn.textContent = "Entrar";

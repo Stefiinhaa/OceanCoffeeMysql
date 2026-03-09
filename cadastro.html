@@ -70,13 +70,7 @@
         </div>
     </div>
 
-    <script type="module">
-        import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.44.1/+esm";
-    
-        const supabaseUrl = "https://uldxazlnnpuoxfzsovmu.supabase.co";
-        const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVsZHhhemxubnB1b3hmenNvdm11Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg3Mjg2NzgsImV4cCI6MjA2NDMwNDY3OH0.fyToys8_muc1XyUebJ19gxGEkCVM_cXg80UJR894xQY";
-        const supabase = createClient(supabaseUrl, supabaseKey);
-
+    <script>
         function showPopup(message) {
             return new Promise((resolve) => {
                 const overlay = document.createElement('div');
@@ -91,6 +85,7 @@
                 overlay.querySelector('.btn-ok')?.addEventListener('click', () => closePopup(true));
             });
         }
+
         function showToast(message) {
             const toast = document.createElement('div');
             toast.className = 'toast-notification success';
@@ -104,15 +99,13 @@
 
         document.addEventListener("DOMContentLoaded", () => {
             const form = document.getElementById('cadastroForm');
-            if (!form) return;
-
             const telefoneInput = document.getElementById('telefone');
             const senhaInput = document.getElementById('senha');
             const submitButton = document.getElementById('submit-button');
             const strengthBar = document.getElementById('strength-bar');
             const strengthText = document.getElementById('strength-text');
 
-            // --- LÓGICA DA MÁSCARA DE TELEFONE ---
+            // MÁSCARA DE TELEFONE
             telefoneInput.addEventListener('input', (e) => {
                 let valor = e.target.value.replace(/\D/g, '');
                 valor = valor.replace(/^(\d{2})(\d)/g, '($1) $2');
@@ -124,7 +117,7 @@
                 e.target.value = valor;
             });
             
-            // --- NOVA LÓGICA PARA FORÇA DA SENHA ---
+            // FORÇA DA SENHA
             function checkPasswordStrength() {
                 const password = senhaInput.value;
                 let score = 0;
@@ -136,27 +129,22 @@
                 strengthBar.style.width = (score * 25) + '%';
                 
                 if (password.length === 0) {
-                    strengthText.textContent = '';
-                    strengthBar.style.backgroundColor = 'transparent';
+                    strengthText.textContent = ''; strengthBar.style.backgroundColor = 'transparent';
                 } else if (score < 3) {
-                    strengthText.textContent = 'Senha Fraca';
-                    strengthBar.style.backgroundColor = '#dc3545';
+                    strengthText.textContent = 'Senha Fraca'; strengthBar.style.backgroundColor = '#dc3545';
                 } else if (score === 3) {
-                    strengthText.textContent = 'Senha Média';
-                    strengthBar.style.backgroundColor = '#ffc107';
+                    strengthText.textContent = 'Senha Média'; strengthBar.style.backgroundColor = '#ffc107';
                 } else {
-                    strengthText.textContent = 'Senha Forte';
-                    strengthBar.style.backgroundColor = '#28a745';
+                    strengthText.textContent = 'Senha Forte'; strengthBar.style.backgroundColor = '#28a745';
                 }
                 
-                // Habilita o botão apenas se a senha for forte
                 submitButton.disabled = score < 4;
                 return score;
             }
 
             senhaInput.addEventListener('input', checkPasswordStrength);
 
-            // --- LÓGICA PARA VER/OCULTAR SENHA ---
+            // VER SENHA
             document.querySelector('.toggle-password').addEventListener('click', function () {
                 const input = this.closest('.password-wrapper').querySelector('input');
                 input.type = input.type === 'password' ? 'text' : 'password';
@@ -176,35 +164,26 @@
                 const senha = document.getElementById("senha").value;
 
                 try {
-                    // Validação final de segurança
-                    if (checkPasswordStrength() < 4) {
-                        throw new Error("A senha não é forte o suficiente. Siga os critérios indicados.");
-                    }
+                    if (checkPasswordStrength() < 4) throw new Error("A senha não é forte o suficiente.");
 
-                    const { data, error } = await supabase.auth.signUp({
-                        email,
-                        password: senha,
-                        options: {
-                            data: {
-                                nome: nome,
-                                telefone: telefone
-                            }
-                        }
+                    const response = await fetch("processar_cadastro.php", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ nome, email, telefone, senha })
                     });
-
-                    if (error) throw error;
                     
-                    showToast("Cadastro realizado com sucesso!");
-                    
-                    setTimeout(() => {
-                        window.location.replace("Login.html");
-                    }, 3500);
+                    const data = await response.json();
 
+                    if (data.status === true) {
+                        showToast("Cadastro realizado com sucesso!");
+                        setTimeout(() => window.location.replace("Login.html"), 2000);
+                    } else {
+                        throw new Error(data.mensagem || "Erro ao cadastrar.");
+                    }
                 } catch (err) {
-                    await showPopup(err.message, 'error');
+                    await showPopup(err.message);
                     btn.disabled = false;
                     btn.textContent = "Cadastrar";
-                    checkPasswordStrength(); // Reavalia o status do botão
                 }
             });
         });
