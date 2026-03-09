@@ -11,14 +11,23 @@
         .card { background-color: rgba(255, 255, 255, 0.95); padding: 40px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); width: 100%; max-width: 450px; text-align: center; backdrop-filter: blur(5px); }
         .card img { max-width: 150px; margin-bottom: 20px; }
         .card h1 { font-size: 2rem; font-weight: 600; margin-bottom: 25px; color: #333; }
+        
         #update-password-form { display: flex; flex-direction: column; gap: 20px; }
-        .input-field { width: 100%; padding: 12px 15px; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; box-sizing: border-box; margin: 0; }
+        
+        /* ESTILOS DO NOVO OLHINHO DA SENHA */
+        .password-wrapper { position: relative; width: 100%; display: flex; align-items: center; }
+        .input-field { width: 100%; padding: 12px 15px; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; box-sizing: border-box; margin: 0; padding-right: 40px; } /* padding-right dá espaço para o ícone */
+        .toggle-password { position: absolute; right: 15px; cursor: pointer; color: #666; font-size: 1.1rem; transition: color 0.2s; }
+        .toggle-password:hover { color: #0047a3; }
+
         .btn-submit { width: 100%; padding: 12px; border: none; border-radius: 8px; background: linear-gradient(to right, #0047a3, #3ac0dd); color: white; font-size: 1.1rem; font-weight: bold; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; }
         .btn-submit:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(0, 71, 163, 0.4); }
         .btn-submit:disabled { background: #aaa; cursor: not-allowed; transform: none; box-shadow: none; }
         .links { margin-top: 20px; color: #555; }
         .links a { color: #0047a3; font-weight: 600; text-decoration: none; }
         .links a:hover { text-decoration: underline; }
+        
+        /* POP-UPS */
         .popup-container { position: fixed; top: 20px; right: 20px; z-index: 10000; display: flex; flex-direction: column; gap: 12px; }
         .popup { display: flex; align-items: center; min-width: 300px; padding: 16px 22px; border-radius: 8px; color: white; font-size: 0.95rem; font-weight: 500; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15); transform: translateX(calc(100% + 20px)); opacity: 0; transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1); }
         .popup.show { transform: translateX(0); opacity: 1; }
@@ -32,8 +41,14 @@
         <img src="IMG/Loginho2.png" alt="Ocean Coffee Brasil">
         <h1>Crie uma Nova Senha</h1>
         <form id="update-password-form">
-            <input class="input-field" type="password" placeholder="Nova senha (mínimo 6)" id="new-password" required minlength="6">
-            <input class="input-field" type="password" placeholder="Confirmar nova senha" id="confirm-password" required minlength="6">
+            <div class="password-wrapper">
+                <input class="input-field" type="password" placeholder="Nova senha (mínimo 6)" id="new-password" required minlength="6">
+                <i class="fas fa-eye toggle-password"></i>
+            </div>
+            <div class="password-wrapper">
+                <input class="input-field" type="password" placeholder="Confirmar nova senha" id="confirm-password" required minlength="6">
+                <i class="fas fa-eye toggle-password"></i>
+            </div>
             <button type="submit" class="btn-submit" id="submit-button">Redefinir Senha</button>
         </form>
          <div class="links">
@@ -42,14 +57,31 @@
     </div>
 
     <script>
+        // Verificação de Segurança (Obriga a ter passado pela página anterior)
         const emailRecuperacao = localStorage.getItem('emailRecuperacao');
         if (!emailRecuperacao) {
             window.location.replace('esqueci-senha.html');
         }
 
+        // Lógica do Pop-up
         function ensurePopupContainer() { let c = document.getElementById('popup-container'); if (!c) { c = document.createElement('div'); c.id = 'popup-container'; c.className = 'popup-container'; document.body.appendChild(c); } return c; }
         function showPopup(message, type = 'info', duration = 3500) { const c = ensurePopupContainer(); const p = document.createElement('div'); p.className = `popup ${type}`; let i = 'fas fa-info-circle'; if (type === 'success') i = 'fas fa-check-circle'; if (type === 'error') i = 'fas fa-times-circle'; p.innerHTML = `<i class="${i}"></i> <div>${message}</div>`; c.prepend(p); requestAnimationFrame(() => p.classList.add('show')); setTimeout(() => { p.classList.remove('show'); p.addEventListener('transitionend', () => p.remove()); }, duration); }
 
+        // LÓGICA DO OLHINHO DE SENHA
+        document.querySelectorAll('.toggle-password').forEach(icon => {
+            icon.addEventListener('click', function() {
+                // Acha o campo de input que está imediatamente antes do ícone
+                const input = this.previousElementSibling;
+                // Troca de password para text e vice-versa
+                const type = input.getAttribute('type') === 'password' ? 'text' : 'password';
+                input.setAttribute('type', type);
+                // Troca o ícone do olho
+                this.classList.toggle('fa-eye');
+                this.classList.toggle('fa-eye-slash');
+            });
+        });
+
+        // LÓGICA DO FORMULÁRIO DE ENVIO
         const form = document.getElementById('update-password-form');
         const submitButton = document.getElementById('submit-button');
         const newPasswordInput = document.getElementById('new-password');
