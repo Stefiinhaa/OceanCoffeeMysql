@@ -1,26 +1,27 @@
 // sw.js - Motor PWA e Notificações da Ocean Coffee
-const CACHE_NAME = 'oceancoffee-v2-mysql'; // Mudamos o nome para forçar a atualização nos telemóveis
+const CACHE_NAME = 'oceancoffee-v3-mysql'; // Subimos a versão para 3
 
-// Ficheiros estáticos básicos para o PWA funcionar offline (apenas o essencial)
+// Ficheiros estáticos básicos usando o ponto inicial (./)
 const STATIC_ASSETS = [
-    '/',
-    '/index.html',
-    '/Login.html',
-    '/CSS/estilo.css',
-    '/IMG/Loginho2.png',
-    '/IMG/Fundo.png'
+    './',
+    './index.html',
+    './Login.html',
+    './CSS/styles.css', // Atualizado para o ficheiro que realmente está no index
+    './IMG/Loginho2.png',
+    './IMG/Fundo.png'
 ];
 
 // 1. INSTALAÇÃO DO SERVICE WORKER E CRIAÇÃO DO CACHE
 self.addEventListener('install', (event) => {
-    self.skipWaiting(); // Força a instalação imediata
+    self.skipWaiting(); 
     event.waitUntil(
         caches.open(CACHE_NAME).then((cache) => {
-            // Guarda apenas a estrutura básica (não guarda dados do MySQL)
             return cache.addAll(STATIC_ASSETS);
         })
     );
 });
+
+// ... (MANTENHA O RESTO DO SEU CÓDIGO sw.js IGUAL DAQUI PARA BAIXO) ...
 
 // 2. ATIVAÇÃO E LIMPEZA DA "SUJIDADE" DO SUPABASE
 self.addEventListener('activate', (event) => {
