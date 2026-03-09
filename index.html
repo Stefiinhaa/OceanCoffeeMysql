@@ -354,26 +354,57 @@
   <button id="btnTopo" onclick="rolarParaTopo()"><img class="up" src="IMG/up-arrow.png"></button>
 
   <script>
+    window.onscroll = function() {
+      const btn = document.getElementById("btnTopo");
+      if (btn) {
+        if (document.body.scrollTop > 20 || document.documentElement.scrollTop > 20) {
+          btn.style.display = "block";
+        } else {
+          btn.style.display = "none";
+        }
+      }
+    };
+
+    function rolarParaTopo() {
+      window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      });
+    }
+  </script>
+
+  <script>
     document.addEventListener('DOMContentLoaded', async () => {
-        // --- LOGICA DO MENU RESPONSIVO ---
+        // --- 1. MENU RESPONSIVO (MOBILE) ---
         const menuToggle = document.getElementById('menu-toggle');
         const mobileNav = document.getElementById('mobile-nav');
         const navOverlay = document.getElementById('nav-overlay');
 
-        if(menuToggle && mobileNav && navOverlay) {
-            const toggleMenu = () => {
+        if(menuToggle && mobileNav) {
+            menuToggle.addEventListener('click', () => {
                 mobileNav.classList.toggle('active');
-                navOverlay.classList.toggle('active');
-            };
-            menuToggle.addEventListener('click', toggleMenu);
-            navOverlay.addEventListener('click', toggleMenu);
-
-            mobileNav.querySelectorAll('a').forEach(link => {
-                link.addEventListener('click', toggleMenu);
+                if(navOverlay) navOverlay.classList.toggle('active');
+            });
+        }
+        
+        if(navOverlay) {
+            navOverlay.addEventListener('click', () => {
+                mobileNav.classList.remove('active');
+                navOverlay.classList.remove('active');
             });
         }
 
-        // --- GESTAO DO BOTAO DE LOGIN/PERFIL ---
+        // Fecha o menu ao clicar num link
+        if(mobileNav) {
+            mobileNav.querySelectorAll('a').forEach(link => {
+                link.addEventListener('click', () => {
+                    mobileNav.classList.remove('active');
+                    if(navOverlay) navOverlay.classList.remove('active');
+                });
+            });
+        }
+
+        // --- 2. GESTÃO DO MENU DE LOGIN/PERFIL ---
         const usuarioLogado = localStorage.getItem("usuarioLogado");
         const loginLinks = document.querySelectorAll('a[href="Login.html"]'); 
         
@@ -385,50 +416,49 @@
             });
         }
 
-        // --- EQUIPAMENTOS EM DESTAQUE ---
+        // --- 3. CARREGAR EQUIPAMENTOS EM DESTAQUE ---
         const gridProdutos = document.getElementById("recent-products-grid");
-        if (!gridProdutos) return;
+        if (gridProdutos) {
+            try {
+                const response = await fetch("listar_anuncios.php");
+                const data = await response.json();
 
-        try {
-            const response = await fetch("listar_anuncios.php");
-            const data = await response.json();
+                if (data.status === true && data.produtos.length > 0) {
+                    gridProdutos.innerHTML = "";
+                    const produtosRecentes = data.produtos.slice(0, 3);
 
-            if (data.status === true && data.produtos.length > 0) {
-                gridProdutos.innerHTML = "";
-                const produtosRecentes = data.produtos.slice(0, 3);
-
-                produtosRecentes.forEach(product => {
-                    const priceFormatted = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(product.preco);
-                    const productCard = `
-                        <article class="equipamentos-destaque-product-card">
-                            <a href="MarketPlace.html?id=${product.id}" class="equipamentos-destaque-product-card__image-container">
-                                <img src="${product.imagem_0 || 'IMG/placeholder.png'}" alt="${product.titulo}" class="equipamentos-destaque-product-card__image">
-                            </a>
-                            <div class="equipamentos-destaque-product-card__content">
-                                <h3 class="equipamentos-destaque-product-card__title">
-                                   <a href="MarketPlace.html?id=${product.id}" style="text-decoration: none; color: inherit;">${product.titulo}</a>
-                                </h3>
-                                <p class="equipamentos-destaque-product-card__description">${product.descricao ? product.descricao.substring(0, 100) : ''}...</p>
-                                <div class="equipamentos-destaque-product-card__footer">
-                                    <span class="equipamentos-destaque-product-card__price">${priceFormatted}</span>
-                                    <a href="MarketPlace.html?id=${product.id}" class="equipamentos-destaque-product-card__button">Saiba Mais</a>
+                    produtosRecentes.forEach(product => {
+                        const priceFormatted = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(product.preco);
+                        const productCard = `
+                            <article class="equipamentos-destaque-product-card">
+                                <a href="MarketPlace.html?id=${product.id}" class="equipamentos-destaque-product-card__image-container">
+                                    <img src="${product.imagem_0 || 'IMG/placeholder.png'}" alt="${product.titulo}" class="equipamentos-destaque-product-card__image">
+                                </a>
+                                <div class="equipamentos-destaque-product-card__content">
+                                    <h3 class="equipamentos-destaque-product-card__title">
+                                       <a href="MarketPlace.html?id=${product.id}" style="text-decoration: none; color: inherit;">${product.titulo}</a>
+                                    </h3>
+                                    <p class="equipamentos-destaque-product-card__description">${product.descricao ? product.descricao.substring(0, 100) : ''}...</p>
+                                    <div class="equipamentos-destaque-product-card__footer">
+                                        <span class="equipamentos-destaque-product-card__price">${priceFormatted}</span>
+                                        <a href="MarketPlace.html?id=${product.id}" class="equipamentos-destaque-product-card__button">Saiba Mais</a>
+                                    </div>
                                 </div>
-                            </div>
-                        </article>
-                    `;
-                    gridProdutos.innerHTML += productCard;
-                });
-            } else {
-                gridProdutos.innerHTML = "<p>Nenhum produto em destaque no momento.</p>";
+                            </article>
+                        `;
+                        gridProdutos.innerHTML += productCard;
+                    });
+                } else {
+                    gridProdutos.innerHTML = "<p>Nenhum produto em destaque no momento.</p>";
+                }
+            } catch (error) {
+                gridProdutos.innerHTML = "<p>Erro ao carregar os produtos.</p>";
             }
-        } catch (error) {
-            gridProdutos.innerHTML = "<p>Erro ao carregar os produtos.</p>";
         }
     });
   </script>
 
   <script>
-    // --- MOTOR DO PWA (INSTALAÇÃO DO APP) ---
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js')
@@ -454,21 +484,25 @@
       bannerPersonalizado.style.display = 'block';
     });
 
-    btnInstalar.addEventListener('click', async () => {
-      if (eventoInstalacaoOficial) {
-        eventoInstalacaoOficial.prompt();
-        const resultado = await eventoInstalacaoOficial.userChoice;
-        if (resultado.outcome === 'accepted') {
-          console.log('App Instalado');
-        }
-        eventoInstalacaoOficial = null;
-        bannerPersonalizado.style.display = 'none';
-      }
-    });
+    if(btnInstalar) {
+        btnInstalar.addEventListener('click', async () => {
+          if (eventoInstalacaoOficial) {
+            eventoInstalacaoOficial.prompt();
+            const resultado = await eventoInstalacaoOficial.userChoice;
+            if (resultado.outcome === 'accepted') {
+              console.log('App Instalado');
+            }
+            eventoInstalacaoOficial = null;
+            bannerPersonalizado.style.display = 'none';
+          }
+        });
+    }
 
-    btnFechar.addEventListener('click', () => {
-      bannerPersonalizado.style.display = 'none';
-    });
+    if(btnFechar) {
+        btnFechar.addEventListener('click', () => {
+          bannerPersonalizado.style.display = 'none';
+        });
+    }
   </script>
 
   <script src="JS/dolar-api.js" defer></script>
