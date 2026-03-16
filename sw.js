@@ -1,63 +1,55 @@
-// sw.js - Motor PWA e Notificações da Ocean Coffee
-const CACHE_NAME = 'oceancoffee-v3-mysql'; // Subimos a versão para 3
+// sw.js - Motor de Notificações e Modo Offline da Ocean Coffee
 
-// Ficheiros estáticos básicos usando o ponto inicial (./)
-const STATIC_ASSETS = [
-    './',
-    './index.html',
-    './Login.html',
-    './CSS/styles.css', // Atualizado para o ficheiro que realmente está no index
-    './IMG/Loginho2.png',
-    './IMG/Fundo.png'
-];
+const CACHE_NAME = 'ocean-coffee-cache-v1';
 
-// 1. INSTALAÇÃO DO SERVICE WORKER E CRIAÇÃO DO CACHE
 self.addEventListener('install', (event) => {
-    self.skipWaiting(); 
-    event.waitUntil(
-        caches.open(CACHE_NAME).then((cache) => {
-            return cache.addAll(STATIC_ASSETS);
-        })
-    );
+    self.skipWaiting(); // Força a instalação imediata
 });
 
-// ... (MANTENHA O RESTO DO SEU CÓDIGO sw.js IGUAL DAQUI PARA BAIXO) ...
-
-// 2. ATIVAÇÃO E LIMPEZA DA "SUJIDADE" DO SUPABASE
 self.addEventListener('activate', (event) => {
     event.waitUntil(
-        caches.keys().then((cacheNames) => {
+        // Limpa caches antigos caso a versão mude
+        caches.keys().then(cacheNames => {
             return Promise.all(
-                cacheNames.map((cache) => {
-                    // Se o cache for diferente da versão atual, apaga-o
+                cacheNames.map(cache => {
                     if (cache !== CACHE_NAME) {
                         return caches.delete(cache);
                     }
                 })
             );
-        }).then(() => self.clients.claim()) // Assume o controlo imediato
+        }).then(() => clients.claim())
     );
 });
 
-// 3. O INTERCETOR DE PEDIDOS (O SEGREDO PARA O PWA FUNCIONAR COM PHP)
-self.addEventListener('fetch', (event) => {
-    const url = new URL(event.request.url);
+// ========================================================================
+// MÁGICA DO MODO OFFLINE (CACHE DINÂMICO)
+// ========================================================================
+self.addEventListener('fetch', function(event) {
+    // Só interceptamos requisições normais de páginas (GET). Ignoramos POST do Supabase, etc.
+    if (event.request.method !== 'GET' || !event.request.url.startsWith('http')) return;
 
-    // REGRA DE OURO: Ignorar completamente ficheiros PHP e pedidos POST (envio de dados).
-    // Estes têm de ir sempre à internet (ao seu servidor MySQL).
-    if (url.pathname.endsWith('.php') || event.request.method !== 'GET') {
-        return; // Sai do Service Worker e processa normalmente na internet
-    }
-
-    // Para os outros ficheiros (HTML, CSS, Imagens):
-    // Estratégia "Network First" (Tenta a internet primeiro, se falhar ou estiver offline, usa o cache)
     event.respondWith(
-        fetch(event.request).catch(() => caches.match(event.request))
+        // 1º TENTA A REDE (Para ter sempre a versão mais atualizada)
+        fetch(event.request)
+            .then(function(response) {
+                // Se a internet funcionou, salva uma cópia da página no Cache para quando faltar internet!
+                const responseClone = response.clone();
+                caches.open(CACHE_NAME).then(function(cache) {
+                    cache.put(event.request, responseClone);
+                });
+                return response;
+            })
+            .catch(function() {
+                // 2º DEU ERRO (SEM INTERNET)? PEGA A CÓPIA SALVA NO CACHE!
+                return caches.match(event.request);
+            })
     );
 });
 
-// ------------------------------------------------------------------------
-// ESCUTAR O PUSH (NOTIFICAÇÕES)
+
+// ========================================================================
+// SISTEMA DE NOTIFICAÇÕES PUSH (Mantido intacto)
+// ========================================================================
 self.addEventListener('push', function(event) {
     let titulo = 'Ocean Coffee';
     let msg = 'Tem uma nova notificação!';
