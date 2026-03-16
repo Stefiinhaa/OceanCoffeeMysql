@@ -7,6 +7,9 @@
   <title>Ocean Coffee - Brasil</title>
   <link class="novo" rel="icon" href="IMG/Loginho2.png" type="image/png">
   <link rel="manifest" href="manifest.json" crossorigin="use-credentials">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="apple-touch-icon" href="IMG/Loginho2.png">
   <meta name="theme_color" content="#005f73">
   <link rel="stylesheet" href="CSS/styles.css">
   <link rel="stylesheet" href="CSS/api.css">
@@ -451,52 +454,71 @@
     });
   </script>
 
-  <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js')
-          .then(reg => console.log('SW Registrado.'))
-          .catch(err => console.error('Erro no SW:', err));
-      });
-
-      document.addEventListener('click', () => {
-        if ('Notification' in window && Notification.permission === 'default') {
-          Notification.requestPermission();
-        }
-      }, { once: true });
-    }
-
-    let eventoInstalacaoOficial;
-    const bannerPersonalizado = document.getElementById('pwa-install-banner');
-    const btnInstalar = document.getElementById('pwa-install-btn');
-    const btnFechar = document.getElementById('pwa-close-btn');
-
-    window.addEventListener('beforeinstallprompt', (e) => {
-      e.preventDefault();
-      eventoInstalacaoOficial = e;
-      if (bannerPersonalizado) bannerPersonalizado.style.display = 'block';
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js')
+        .then(reg => console.log('SW Registrado.'))
+        .catch(err => console.error('Erro no SW:', err));
     });
 
-    if(btnInstalar) {
-        btnInstalar.addEventListener('click', async () => {
-          if (eventoInstalacaoOficial) {
-            eventoInstalacaoOficial.prompt();
-            const resultado = await eventoInstalacaoOficial.userChoice;
-            if (resultado.outcome === 'accepted') {
-              console.log('App Instalado');
-            }
-            eventoInstalacaoOficial = null;
-            if (bannerPersonalizado) bannerPersonalizado.style.display = 'none';
-          }
-        });
-    }
+    document.addEventListener('click', () => {
+      if ('Notification' in window && Notification.permission === 'default') {
+        Notification.requestPermission();
+      }
+    }, { once: true });
+  }
 
-    if(btnFechar) {
-        btnFechar.addEventListener('click', () => {
-          if (bannerPersonalizado) bannerPersonalizado.style.display = 'none';
-        });
+  // --- LÓGICA DO BANNER DE INSTALAÇÃO DO APP ---
+  const bannerPersonalizado = document.getElementById('pwa-install-banner');
+  const btnInstalar = document.getElementById('pwa-install-btn');
+  const btnFechar = document.getElementById('pwa-close-btn');
+
+  // Detetar se é um dispositivo Apple (iOS)
+  const isIos = () => {
+    const userAgent = window.navigator.userAgent.toLowerCase();
+    return /iphone|ipad|ipod/.test(userAgent);
+  };
+  
+  // Verifica se já está instalado (rodando como app)
+  const isInStandaloneMode = () => ('standalone' in window.navigator) && (window.navigator.standalone);
+
+  // 1. LÓGICA PARA ANDROID (Google Chrome)
+  let eventoInstalacaoOficial;
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    eventoInstalacaoOficial = e;
+    bannerPersonalizado.style.display = 'block'; // Mostra o banner no Android
+  });
+
+  btnInstalar.addEventListener('click', async () => {
+    if (eventoInstalacaoOficial) {
+      eventoInstalacaoOficial.prompt();
+      const resultado = await eventoInstalacaoOficial.userChoice;
+      eventoInstalacaoOficial = null;
+      bannerPersonalizado.style.display = 'none';
     }
-  </script>
+  });
+
+  // 2. LÓGICA PARA IOS (iPHONE/iPAD)
+  // No iOS, o evento 'beforeinstallprompt' não existe, então mostramos o banner manualmente
+  if (isIos() && !isInStandaloneMode()) {
+    bannerPersonalizado.style.display = 'block'; // Força o banner a aparecer no iPhone
+    
+    // Mudamos o texto do botão para ensinar o utilizador
+    const textoApp = bannerPersonalizado.querySelector('p:nth-child(2)');
+    textoApp.innerHTML = "Toque em <b>Compartilhar</b> <i class='fas fa-share-square'></i> e depois <b>Adicionar à Tela de Início</b>";
+    textoApp.style.fontSize = "11px";
+    
+    // Escondemos o botão "Baixar" porque no iOS ele não funciona por código
+    btnInstalar.style.display = 'none'; 
+  }
+
+  // Fechar o banner
+  btnFechar.addEventListener('click', () => {
+    bannerPersonalizado.style.display = 'none';
+  });
+</script>
 
   <script src="JS/dolar-api.js" defer></script>
   <script src="JS/weather-api.js" defer></script>
