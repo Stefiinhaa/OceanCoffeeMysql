@@ -207,7 +207,10 @@
         </div>
     </div>
 
-    <script>
+<script>
+    // =========================================================
+    // 1. FUNÇÕES AUXILIARES E DE SEGURANÇA
+    // =========================================================
     function protegerPagina() {
         const usuarioStr = localStorage.getItem("usuarioLogado");
         if (!usuarioStr) { window.location.replace('Login.html'); }
@@ -215,10 +218,36 @@
     }
     const user = protegerPagina();
     
-    function ensurePopupContainer() { let c = document.getElementById('popup-container'); if (!c) { c = document.createElement('div'); c.id = 'popup-container'; c.className = 'popup-container'; document.body.appendChild(c); } return c; }
-    function showPopup(message, type = 'info', duration = 4000) { const c = ensurePopupContainer(); const p = document.createElement('div'); p.className = `popup ${type}`; let i = 'fas fa-info-circle'; if (type === 'success') i = 'fas fa-check-circle'; if (type === 'error') i = 'fas fa-times-circle'; p.innerHTML = `<i class="${i}"></i> <div>${message}</div>`; c.prepend(p); requestAnimationFrame(() => p.classList.add('show')); setTimeout(() => { p.classList.remove('show'); p.addEventListener('transitionend', () => p.remove()); }, duration); }
+    function ensurePopupContainer() { 
+        let c = document.getElementById('popup-container'); 
+        if (!c) { 
+            c = document.createElement('div'); 
+            c.id = 'popup-container'; 
+            c.className = 'popup-container'; 
+            document.body.appendChild(c); 
+        } 
+        return c; 
+    }
+    
+    function showPopup(message, type = 'info', duration = 4000) { 
+        const c = ensurePopupContainer(); 
+        const p = document.createElement('div'); 
+        p.className = `popup ${type}`; 
+        let i = 'fas fa-info-circle'; 
+        if (type === 'success') i = 'fas fa-check-circle'; 
+        if (type === 'error') i = 'fas fa-times-circle'; 
+        p.innerHTML = `<i class="${i}"></i> <div>${message}</div>`; 
+        c.prepend(p); 
+        requestAnimationFrame(() => p.classList.add('show')); 
+        setTimeout(() => { 
+            p.classList.remove('show'); 
+            p.addEventListener('transitionend', () => p.remove()); 
+        }, duration); 
+    }
 
-    // FUNÇÃO QUE ABRE O COFRE E SALVA OFFLINE
+    // =========================================================
+    // 2. FUNÇÃO QUE ABRE O COFRE E SALVA OFFLINE
+    // =========================================================
     function guardarAnuncioOffline(dados) {
         return new Promise((resolve, reject) => {
             const request = indexedDB.open('OceanCoffeeDB', 1);
@@ -237,7 +266,11 @@
         });
     }
 
+    // =========================================================
+    // 3. LÓGICA PRINCIPAL DA PÁGINA
+    // =========================================================
     document.addEventListener("DOMContentLoaded", () => {
+        // Preenche dados do usuário na tela
         if (user) {
             const firstName = user.nome.split(' ')[0];
             document.getElementById('welcome-message').textContent = firstName;
@@ -246,7 +279,7 @@
             document.getElementById('avatar-inicial').textContent = user.nome.charAt(0).toUpperCase();
         }
 
-        // Menu Mobile e Popups
+        // Menu Mobile e Popups de Logout
         const menuToggle = document.getElementById('menu-toggle');
         const mobileNav = document.getElementById('mobile-nav');
         const navOverlay = document.getElementById('nav-overlay');
@@ -291,7 +324,9 @@
             });
         });
 
-        // ENVIO DO FORMULÁRIO (HÍBRIDO: ONLINE E OFFLINE)
+        // =========================================================
+        // 4. ENVIO DO FORMULÁRIO (HÍBRIDO: ONLINE E OFFLINE ROBUSTO)
+        // =========================================================
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = document.getElementById('publicarBtn');
@@ -313,19 +348,20 @@
 
                 if (!file1) throw new Error("Selecione pelo menos a Imagem Principal.");
 
-                // 1. SE TIVER INTERNET: FLUXO NORMAL DA API PHP
-                if (navigator.onLine) {
-                    const formData = new FormData();
-                    formData.append('usuario_id', user.id);
-                    formData.append('titulo', titulo);
-                    formData.append('descricao', descricao);
-                    formData.append('preco', precoNumerico);
-                    formData.append('local', local);
-                    formData.append('contato', contato);
-                    if (file1) formData.append('imagem_0', file1);
-                    if (file2) formData.append('imagem_1', file2);
-                    if (file3) formData.append('imagem_2', file3);
-                    
+                // PREPARA OS DADOS PARA ENVIAR
+                const formData = new FormData();
+                formData.append('usuario_id', user.id);
+                formData.append('titulo', titulo);
+                formData.append('descricao', descricao);
+                formData.append('preco', precoNumerico);
+                formData.append('local', local);
+                formData.append('contato', contato);
+                if (file1) formData.append('imagem_0', file1);
+                if (file2) formData.append('imagem_1', file2);
+                if (file3) formData.append('imagem_2', file3);
+
+                try {
+                    // TENTA ENVIAR ONLINE PRIMEIRO
                     const response = await fetch('salvar_anuncio.php', { method: 'POST', body: formData });
                     const data = await response.json();
                     
@@ -333,36 +369,43 @@
                         showPopup("Anúncio enviado para análise com sucesso!", "success");
                         setTimeout(() => window.location.href = "meus-anuncios.html", 2500);
                     } else {
-                        throw new Error(data.mensagem);
+                        throw new Error(data.mensagem); // Erro vindo do PHP
                     }
-                } 
-                // 2. SE NÃO TIVER INTERNET: GUARDA NO BANCO DE DADOS INVISÍVEL
-                else {
-                    const dadosOffline = {
-                        usuario_id: user.id,
-                        titulo: titulo,
-                        descricao: descricao,
-                        preco: precoNumerico,
-                        local: local,
-                        contato: contato,
-                        imagem_0: file1, // O Chrome sabe guardar arquivos de imagem!
-                        imagem_1: file2 || null,
-                        imagem_2: file3 || null,
-                        dataRegistro: new Date().toISOString()
-                    };
 
-                    await guardarAnuncioOffline(dadosOffline);
-
-                    // Pede pro Service Worker ficar em alerta e enviar quando a internet voltar
-                    if ('serviceWorker' in navigator && 'SyncManager' in window) {
-                        const sw = await navigator.serviceWorker.ready;
-                        await sw.sync.register('enviar-anuncios-offline');
+                } catch (networkError) {
+                    // SE A INTERNET CAIR NA HORA H (FAILED TO FETCH), ELE SALVA OFFLINE!
+                    if (!navigator.onLine || networkError.message.includes('Failed to fetch') || networkError.message.includes('NetworkError')) {
                         
-                        showPopup("Sem internet! Seu anúncio foi salvo e será enviado assim que você reconectar.", "info", 5000);
-                        // Joga a pessoa pra tela de Meus Anúncios
-                        setTimeout(() => window.location.href = "meus-anuncios.html", 4000);
+                        console.log("Falha na rede detectada. Guardando no cofre offline...");
+                        
+                        const dadosOffline = {
+                            usuario_id: user.id,
+                            titulo: titulo,
+                            descricao: descricao,
+                            preco: precoNumerico,
+                            local: local,
+                            contato: contato,
+                            imagem_0: file1, 
+                            imagem_1: file2 || null,
+                            imagem_2: file3 || null,
+                            dataRegistro: new Date().toISOString()
+                        };
+
+                        await guardarAnuncioOffline(dadosOffline);
+
+                        // Pede pro Service Worker ficar em alerta e enviar quando a internet voltar
+                        if ('serviceWorker' in navigator && 'SyncManager' in window) {
+                            const sw = await navigator.serviceWorker.ready;
+                            await sw.sync.register('enviar-anuncios-offline');
+                            
+                            showPopup("Sem internet! Seu anúncio foi salvo e será enviado quando a conexão voltar.", "info", 5000);
+                            setTimeout(() => window.location.href = "meus-anuncios.html", 4000);
+                        } else {
+                            throw new Error("Você está sem conexão, tente enviar quando a internet voltar.");
+                        }
                     } else {
-                        throw new Error("Você está sem conexão, tente quando a internet voltar.");
+                        // Se for um erro real do sistema e não da internet, mostra o erro normal
+                        throw networkError; 
                     }
                 }
             } catch (err) {
