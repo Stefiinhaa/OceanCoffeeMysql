@@ -172,216 +172,192 @@
         </div>
     </nav>
     
-    <script>
-        // --- Funções Utilitárias e de Segurança ---
-        function protegerPagina() {
-            const usuario = localStorage.getItem("usuarioLogado");
-            if (!usuario) { window.location.replace('Login.html'); }
-        }
-        protegerPagina();
+<script>
+    // =========================================================
+    // 1. SEGURANÇA E POPUPS
+    // =========================================================
+    function protegerPagina() {
+        const usuario = localStorage.getItem("usuarioLogado");
+        if (!usuario) { window.location.replace('Login.html'); }
+        return JSON.parse(usuario);
+    }
+    const user = protegerPagina();
 
-        function ensurePopupContainer() { let c = document.getElementById('popup-container'); if (!c) { c = document.createElement('div'); c.id = 'popup-container'; c.className = 'popup-container'; document.body.appendChild(c); } return c; }
+    function ensurePopupContainer() { let c = document.getElementById('popup-container'); if (!c) { c = document.createElement('div'); c.id = 'popup-container'; c.className = 'popup-container'; document.body.appendChild(c); } return c; }
+    function showPopup(message, type = 'info', duration = 3500) { const c = ensurePopupContainer(); const p = document.createElement('div'); p.className = `popup ${type}`; let i = 'fas fa-info-circle'; if (type === 'success') i = 'fas fa-check-circle'; if (type === 'error') i = 'fas fa-times-circle'; p.innerHTML = `<i class="${i}"></i> <div>${message}</div>`; c.prepend(p); requestAnimationFrame(() => p.classList.add('show')); setTimeout(() => { p.classList.remove('show'); p.addEventListener('transitionend', () => p.remove()); }, duration); }
+    function showConfirmationPopup(title, message, options = {}) { const { confirmText = 'Sim', cancelText = 'Cancelar' } = options; return new Promise((resolve) => { const o = document.createElement('div'); o.className = 'confirmation-overlay'; o.innerHTML = `<div class="confirmation-modal"><h3>${title}</h3><p>${message}</p><div class="confirmation-actions"><button class="confirmation-btn-cancel">${cancelText}</button><button class="confirmation-btn-confirm">${confirmText}</button></div></div>`; const close = (result) => { o.classList.remove('show'); o.addEventListener('transitionend', () => { o.remove(); resolve(result); }); }; o.querySelector('.confirmation-btn-cancel').addEventListener('click', () => close(false)); o.querySelector('.confirmation-btn-confirm').addEventListener('click', () => close(true)); document.body.appendChild(o); requestAnimationFrame(() => o.classList.add('show')); }); }
+
+    // =========================================================
+    // 2. FUNÇÃO PARA GUARDAR EDIÇÃO OFFLINE (NOVA TABELA 2)
+    // =========================================================
+    function guardarEdicaoOffline(dados) {
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open('OceanCoffeeDB', 2);
+            request.onupgradeneeded = (event) => {
+                const db = event.target.result;
+                if (!db.objectStoreNames.contains('anuncios_pendentes')) db.createObjectStore('anuncios_pendentes', { keyPath: 'id', autoIncrement: true });
+                if (!db.objectStoreNames.contains('edicoes_pendentes')) db.createObjectStore('edicoes_pendentes', { keyPath: 'id_local', autoIncrement: true });
+            };
+            request.onsuccess = (event) => {
+                const db = event.target.result;
+                const tx = db.transaction('edicoes_pendentes', 'readwrite');
+                const store = tx.objectStore('edicoes_pendentes');
+                store.add(dados);
+                tx.oncomplete = resolve;
+            };
+            request.onerror = reject;
+        });
+    }
+
+    document.addEventListener("DOMContentLoaded", async () => {
+        const form = document.getElementById('anuncioForm');
+        const loadingMessage = document.getElementById('loading-message');
         
-        function showPopup(message, type = 'info', duration = 3500) {
-            const c = ensurePopupContainer();
-            const p = document.createElement('div');
-            p.className = `popup ${type}`;
-            let i = 'fas fa-info-circle';
-            if (type === 'success') i = 'fas fa-check-circle';
-            if (type === 'error') i = 'fas fa-times-circle';
-            p.innerHTML = `<i class="${i}"></i> <div>${message}</div>`;
-            c.prepend(p);
-            requestAnimationFrame(() => p.classList.add('show'));
-            setTimeout(() => { p.classList.remove('show'); p.addEventListener('transitionend', () => p.remove()); }, duration);
+        if (user) {
+            const firstName = user.nome.split(' ')[0];
+            document.getElementById('welcome-message').textContent = firstName;
+            document.getElementById('mobile-welcome-message').textContent = `Olá, ${firstName}!`;
+            document.getElementById('user-email-sidebar').textContent = user.email;
+            document.getElementById('avatar-inicial').textContent = user.nome.charAt(0).toUpperCase();
         }
 
-        function showConfirmationPopup(title, message, options = {}) {
-            const { confirmText = 'Sim', cancelText = 'Cancelar' } = options;
-            return new Promise((resolve) => {
-                const o = document.createElement('div');
-                o.className = 'confirmation-overlay';
-                o.innerHTML = `<div class="confirmation-modal"><h3>${title}</h3><p>${message}</p><div class="confirmation-actions"><button class="confirmation-btn-cancel">${cancelText}</button><button class="confirmation-btn-confirm">${confirmText}</button></div></div>`;
-                const close = (result) => { o.classList.remove('show'); o.addEventListener('transitionend', () => { o.remove(); resolve(result); }); };
-                o.querySelector('.confirmation-btn-cancel').addEventListener('click', () => close(false));
-                o.querySelector('.confirmation-btn-confirm').addEventListener('click', () => close(true));
-                document.body.appendChild(o);
-                requestAnimationFrame(() => o.classList.add('show'));
-            });
-        }
+        const precoInput = document.getElementById('preco');
+        const telefoneInput = document.getElementById('telefone');
 
-        document.addEventListener("DOMContentLoaded", async () => {
-            const form = document.getElementById('anuncioForm');
-            const loadingMessage = document.getElementById('loading-message');
-            
-            const usuarioStr = localStorage.getItem("usuarioLogado");
-            if (!usuarioStr) return;
-            const user = JSON.parse(usuarioStr);
+        // Formatação de Inputs
+        precoInput.addEventListener('input', (e) => { let value = e.target.value.replace(/\D/g, ''); value = (parseInt(value, 10) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); e.target.value = value; });
+        precoInput.addEventListener('focus', (e) => { if (!e.target.value || parseFloat(e.target.value.replace(/\D/g, '')/100) === 0) e.target.value = 'R$ 0,00'; });
+        const telefoneMask = IMask(telefoneInput, { mask: [ { mask: '(00) 0000-0000' }, { mask: '(00) 00000-0000' } ] });
 
-            // Preencher dados do utilizador
-            if (user) {
-                const firstName = user.nome.split(' ')[0];
-                document.getElementById('welcome-message').textContent = firstName;
-                document.getElementById('mobile-welcome-message').textContent = `Olá, ${firstName}!`;
-                document.getElementById('user-email-sidebar').textContent = user.email;
-                document.getElementById('avatar-inicial').textContent = user.nome.charAt(0).toUpperCase();
-            }
+        // Identifica qual anúncio estamos a editar
+        const params = new URLSearchParams(window.location.search);
+        const anuncioId = params.get('id');
+        if (!anuncioId) { loadingMessage.textContent = "Erro: ID do anúncio não fornecido."; return; }
 
-            const precoInput = document.getElementById('preco');
-            const telefoneInput = document.getElementById('telefone');
+        // --- CARREGAR DADOS DO ANÚNCIO ---
+        try {
+            const response = await fetch(`buscar_anuncio_edicao.php?id=${anuncioId}`);
+            const data = await response.json();
 
-            // --- Lógica de Formatação ---
-            precoInput.addEventListener('input', (e) => {
-                let value = e.target.value.replace(/\D/g, '');
-                value = (parseInt(value, 10) / 100).toLocaleString('pt-BR', {
-                    style: 'currency',
-                    currency: 'BRL'
+            if (data.status === true) {
+                const anuncio = data.produto;
+                document.getElementById('produto').value = anuncio.titulo;
+                document.getElementById('descricao').value = anuncio.descricao;
+                precoInput.value = (parseFloat(anuncio.preco) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                document.getElementById('local').value = anuncio.local || '';
+                telefoneMask.value = anuncio.contato || '';
+                
+                const imagensArray = [anuncio.imagem_0, anuncio.imagem_1, anuncio.imagem_2];
+                const previews = [document.getElementById('preview1'), document.getElementById('preview2'), document.getElementById('preview3')];
+                const placeholders = [document.getElementById('placeholder1'), document.getElementById('placeholder2'), document.getElementById('placeholder3')];
+                
+                previews.forEach((img, index) => {
+                    if(imagensArray[index] && imagensArray[index] !== '') {
+                        img.src = imagensArray[index];
+                        placeholders[index].style.display = 'none';
+                    } else {
+                        img.src = '';
+                        placeholders[index].style.display = 'flex';
+                    }
                 });
-                e.target.value = value;
+
+                loadingMessage.style.display = 'none';
+                form.style.display = 'flex';
+            } else { loadingMessage.textContent = "Erro ao carregar o anúncio."; }
+        } catch (error) { loadingMessage.textContent = "Você está offline. Acesse com internet para carregar o anúncio."; }
+
+        // Mudar imagens
+        document.querySelectorAll('input[type="file"]').forEach(input => {
+            input.addEventListener('change', function(event) {
+                const file = event.target.files[0]; if (!file) return;
+                const previewElement = document.getElementById(this.dataset.previewId);
+                const placeholderElement = document.getElementById(this.dataset.previewId.replace('preview', 'placeholder'));
+                const reader = new FileReader();
+                reader.onload = e => { previewElement.src = e.target.result; placeholderElement.style.display = 'none'; };
+                reader.readAsDataURL(file);
             });
-            precoInput.addEventListener('focus', (e) => {
-                if (!e.target.value || parseFloat(e.target.value.replace(/\D/g, '')/100) === 0) {
-                    e.target.value = 'R$ 0,00';
-                }
-            });
+        });
 
-            const telefoneMask = IMask(telefoneInput, { mask: [ { mask: '(00) 0000-0000' }, { mask: '(00) 00000-0000' } ] });
+        // =========================================================
+        // 3. O ENVIO DA EDIÇÃO (BLINDADO CONTRA FALHAS DE REDE)
+        // =========================================================
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('publicarBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
 
-            // Capturar ID do anúncio na URL
-            const params = new URLSearchParams(window.location.search);
-            const anuncioId = params.get('id');
-            if (!anuncioId) {
-                loadingMessage.textContent = "Erro: ID do anúncio não fornecido.";
-                return;
-            }
-
-            // --- CARREGAR DADOS DO ANÚNCIO (MySQL) ---
             try {
-                const response = await fetch(`buscar_anuncio_edicao.php?id=${anuncioId}`);
-                const data = await response.json();
+                let precoNumerico = precoInput.value.replace('R$', '').replace(/\./g, '').replace(',', '.').trim();
 
-                if (data.status === true) {
-                    const anuncio = data.produto;
-                    
-                    // Preencher os campos com a nomenclatura correta do MySQL
-                    document.getElementById('produto').value = anuncio.titulo;
-                    document.getElementById('descricao').value = anuncio.descricao;
-                    precoInput.value = (parseFloat(anuncio.preco) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-                    document.getElementById('local').value = anuncio.local || '';
-                    telefoneMask.value = anuncio.contato || '';
-                    
-                    // Preencher imagens
-                    const imagensArray = [anuncio.imagem_0, anuncio.imagem_1, anuncio.imagem_2];
-                    const previews = [document.getElementById('preview1'), document.getElementById('preview2'), document.getElementById('preview3')];
-                    const placeholders = [document.getElementById('placeholder1'), document.getElementById('placeholder2'), document.getElementById('placeholder3')];
-                    
-                    previews.forEach((img, index) => {
-                        if(imagensArray[index] && imagensArray[index] !== '') {
-                            img.src = imagensArray[index];
-                            placeholders[index].style.display = 'none';
-                        } else {
-                            img.src = '';
-                            placeholders[index].style.display = 'flex';
-                        }
-                    });
-
-                    loadingMessage.style.display = 'none';
-                    form.style.display = 'flex';
-                } else {
-                    loadingMessage.textContent = "Erro ao carregar o anúncio.";
-                }
-            } catch (error) {
-                console.error("Erro:", error);
-                loadingMessage.textContent = "Falha de comunicação com o servidor.";
-            }
-
-            // --- LÓGICA DE PRÉ-VISUALIZAÇÃO DE NOVAS IMAGENS ---
-            document.querySelectorAll('input[type="file"]').forEach(input => {
-                input.addEventListener('change', function(event) {
-                    const file = event.target.files[0];
-                    if (!file) return;
-                    const previewElement = document.getElementById(this.dataset.previewId);
-                    const placeholderElement = document.getElementById(this.dataset.previewId.replace('preview', 'placeholder'));
-                    
-                    const reader = new FileReader();
-                    reader.onload = e => { 
-                        previewElement.src = e.target.result; 
-                        placeholderElement.style.display = 'none';
-                    };
-                    reader.readAsDataURL(file);
-                });
-            });
-
-            // --- SUBMETER ATUALIZAÇÃO ---
-            form.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const btn = document.getElementById('publicarBtn');
-                btn.disabled = true;
-                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
+                const formData = new FormData();
+                formData.append('id', anuncioId);
+                formData.append('titulo', document.getElementById('produto').value);
+                formData.append('descricao', document.getElementById('descricao').value);
+                formData.append('preco', precoNumerico);
+                formData.append('local', document.getElementById('local').value);
+                formData.append('contato', telefoneMask.unmaskedValue);
+                formData.append('imagem_0', document.getElementById('preview1').src);
+                formData.append('imagem_1', document.getElementById('preview2').src);
+                formData.append('imagem_2', document.getElementById('preview3').src);
 
                 try {
-                    // Converter valor monetário para número
-                    let precoNumerico = precoInput.value.replace('R$', '').replace(/\./g, '').replace(',', '.').trim();
-
-                    // Prepara os dados para o envio (como FormData para suportar imagens longas)
-                    const formData = new FormData();
-                    formData.append('id', anuncioId);
-                    formData.append('titulo', document.getElementById('produto').value);
-                    formData.append('descricao', document.getElementById('descricao').value);
-                    formData.append('preco', precoNumerico);
-                    formData.append('local', document.getElementById('local').value);
-                    formData.append('contato', telefoneMask.unmaskedValue);
-                    
-                    // Envia o src das imagens (que pode ser a Base64 nova ou o link antigo)
-                    formData.append('imagem_0', document.getElementById('preview1').src);
-                    formData.append('imagem_1', document.getElementById('preview2').src);
-                    formData.append('imagem_2', document.getElementById('preview3').src);
-
-                    const response = await fetch('atualizar_anuncio.php', {
-                        method: 'POST',
-                        body: formData
-                    });
-                    
+                    // TENTA SALVAR ONLINE NORMALMENTE
+                    const response = await fetch('atualizar_anuncio.php', { method: 'POST', body: formData });
                     const data = await response.json();
 
                     if (data.status === true) {
                         showPopup('Anúncio atualizado e enviado para análise!', 'success');
-                        setTimeout(() => {
-                            window.location.href = 'meus-anuncios.html';
-                        }, 2000);
+                        setTimeout(() => window.location.href = 'meus-anuncios.html', 2000);
+                    } else { throw new Error(data.mensagem); }
+
+                } catch (networkError) {
+                    // SE A INTERNET CAIR, ELE SALVA NO COFRE
+                    if (!navigator.onLine || networkError.message.includes('Failed to fetch') || networkError.message.includes('NetworkError')) {
+                        console.log("Sem conexão: Guardando edição offline...");
+                        
+                        const edicaoOffline = {
+                            anuncio_id: anuncioId,
+                            titulo: document.getElementById('produto').value,
+                            descricao: document.getElementById('descricao').value,
+                            preco: precoNumerico,
+                            local: document.getElementById('local').value,
+                            contato: telefoneMask.unmaskedValue,
+                            imagem_0: document.getElementById('preview1').src,
+                            imagem_1: document.getElementById('preview2').src,
+                            imagem_2: document.getElementById('preview3').src,
+                        };
+
+                        await guardarEdicaoOffline(edicaoOffline);
+
+                        if ('serviceWorker' in navigator && 'SyncManager' in window) {
+                            const sw = await navigator.serviceWorker.ready;
+                            await sw.sync.register('editar-anuncios-offline'); // REGISTRA TAREFA DE EDIÇÃO
+                            
+                            showPopup("Sem internet! Suas edições foram salvas e serão aplicadas quando a conexão voltar.", "info", 5000);
+                            setTimeout(() => window.location.href = "meus-anuncios.html", 4000);
+                        } else {
+                            throw new Error("Você está sem conexão. Tente salvar quando a internet voltar.");
+                        }
                     } else {
-                        throw new Error(data.mensagem);
+                        throw networkError; // Mostra erro do PHP se não for problema de rede
                     }
-
-                } catch (error) {
-                    showPopup(`Erro ao salvar: ${error.message}`, 'error');
-                } finally {
-                    btn.disabled = false;
-                    btn.innerHTML = '<i class="fas fa-save"></i> Salvar Alterações';
                 }
-            });
-
-            // --- LÓGICA DE LOGOUT E MENU ---
-            async function handleLogout(e) { 
-                e.preventDefault(); 
-                const confirmed = await showConfirmationPopup('Confirmar Saída', 'Você tem certeza que deseja sair da sua conta?', { confirmText: 'Sim, Sair' });
-                if (confirmed) {
-                    showPopup("Saindo...", 'info', 1500);
-                    localStorage.removeItem("usuarioLogado");
-                    setTimeout(() => window.location.replace("index.html"), 500);
-                }
+            } catch (error) {
+                showPopup(`Erro ao salvar: ${error.message}`, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-save"></i> Salvar Alterações';
             }
-            document.getElementById('logout-btn').addEventListener('click', handleLogout);
-            document.getElementById('mobile-logout-btn').addEventListener('click', handleLogout);
-            
-            const menuToggle = document.getElementById('menu-toggle');
-            const mobileNav = document.getElementById('mobile-nav');
-            const navOverlay = document.getElementById('nav-overlay');
-            
-            function closeMenu() { mobileNav.classList.remove('is-open'); navOverlay.classList.remove('is-open'); }
-            
-            menuToggle.addEventListener('click', () => { mobileNav.classList.add('is-open'); navOverlay.classList.add('is-open'); });
-            navOverlay.addEventListener('click', closeMenu);
         });
-    </script>
+
+        // Logout e Menus Mobile
+        async function handleLogout(e) { e.preventDefault(); const confirmed = await showConfirmationPopup('Confirmar Saída', 'Você tem certeza que deseja sair da sua conta?', { confirmText: 'Sim, Sair' }); if (confirmed) { showPopup("Saindo...", 'info', 1500); localStorage.removeItem("usuarioLogado"); setTimeout(() => window.location.replace("index.html"), 500); } }
+        document.getElementById('logout-btn').addEventListener('click', handleLogout); document.getElementById('mobile-logout-btn').addEventListener('click', handleLogout);
+        const menuToggle = document.getElementById('menu-toggle'); const mobileNav = document.getElementById('mobile-nav'); const navOverlay = document.getElementById('nav-overlay');
+        function closeMenu() { mobileNav.classList.remove('is-open'); navOverlay.classList.remove('is-open'); }
+        menuToggle.addEventListener('click', () => { mobileNav.classList.add('is-open'); navOverlay.classList.add('is-open'); }); navOverlay.addEventListener('click', closeMenu);
+    });
+</script>
 </body>
 </html>

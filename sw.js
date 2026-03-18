@@ -3,36 +3,27 @@
 const CACHE_NAME = 'ocean-coffee-cache-v1';
 
 self.addEventListener('install', (event) => {
-    self.skipWaiting(); // Força a instalação imediata
+    self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
     event.waitUntil(
-        // Limpa caches antigos caso a versão mude
         caches.keys().then(cacheNames => {
             return Promise.all(
                 cacheNames.map(cache => {
-                    if (cache !== CACHE_NAME) {
-                        return caches.delete(cache);
-                    }
+                    if (cache !== CACHE_NAME) return caches.delete(cache);
                 })
             );
         }).then(() => clients.claim())
     );
 });
 
-// ========================================================================
-// MÁGICA DO MODO OFFLINE (CACHE DINÂMICO)
-// ========================================================================
 self.addEventListener('fetch', function(event) {
-    // Só interceptamos requisições normais de páginas (GET). Ignoramos POST do Supabase, etc.
     if (event.request.method !== 'GET' || !event.request.url.startsWith('http')) return;
 
     event.respondWith(
-        // 1º TENTA A REDE (Para ter sempre a versão mais atualizada)
         fetch(event.request)
             .then(function(response) {
-                // Se a internet funcionou, salva uma cópia da página no Cache para quando faltar internet!
                 const responseClone = response.clone();
                 caches.open(CACHE_NAME).then(function(cache) {
                     cache.put(event.request, responseClone);
@@ -40,21 +31,15 @@ self.addEventListener('fetch', function(event) {
                 return response;
             })
             .catch(function() {
-                // 2º DEU ERRO (SEM INTERNET)? PEGA A CÓPIA SALVA NO CACHE!
                 return caches.match(event.request);
             })
     );
 });
 
-
-// ========================================================================
-// SISTEMA DE NOTIFICAÇÕES PUSH (Mantido intacto)
-// ========================================================================
 self.addEventListener('push', function(event) {
     let titulo = 'Ocean Coffee';
     let msg = 'Tem uma nova notificação!';
 
-    // Tratamento à prova de falhas
     if (event.data) {
         try {
             const data = event.data.json();
@@ -70,52 +55,52 @@ self.addEventListener('push', function(event) {
         icon: 'IMG/Loginho2.png',
         badge: 'IMG/Loginho2.png',
         vibrate: [200, 100, 200],
-        data: {
-            url: '/' 
-        }
+        data: { url: '/' }
     };
 
-    event.waitUntil(
-        self.registration.showNotification(titulo, options)
-    );
+    event.waitUntil(self.registration.showNotification(titulo, options));
 });
 
-// Ação ao clicar na notificação
 self.addEventListener('notificationclick', function(event) {
     event.notification.close();
-    event.waitUntil(
-        clients.openWindow(event.notification.data.url)
-    );
+    event.waitUntil(clients.openWindow(event.notification.data.url));
 });
 
 // ========================================================================
-// MÁGICA DE SINCRONIZAÇÃO EM SEGUNDO PLANO (BACKGROUND SYNC)
+// MÁGICA DE SINCRONIZAÇÃO EM SEGUNDO PLANO (CRIAR E EDITAR)
 // ========================================================================
 
-// 1. Função para abrir o cofre offline (IndexedDB)
 function abrirCofreOffline() {
     return new Promise((resolve, reject) => {
-        const request = indexedDB.open('OceanCoffeeDB', 1);
+        // VERSÃO 2: Para criar a nova tabela de edições
+        const request = indexedDB.open('OceanCoffeeDB', 2); 
+        
         request.onupgradeneeded = (event) => {
             const db = event.target.result;
-            // Cria a tabela onde os anúncios offline vão ficar esperando
-            db.createObjectStore('anuncios_pendentes', { keyPath: 'id', autoIncrement: true });
+            if (!db.objectStoreNames.contains('anuncios_pendentes')) {
+                db.createObjectStore('anuncios_pendentes', { keyPath: 'id', autoIncrement: true });
+            }
+            if (!db.objectStoreNames.contains('edicoes_pendentes')) {
+                db.createObjectStore('edicoes_pendentes', { keyPath: 'id_local', autoIncrement: true });
+            }
         };
         request.onsuccess = () => resolve(request.result);
         request.onerror = () => reject('Erro ao abrir o cofre offline');
     });
 }
 
-// 2. Escutar o evento 'sync' (Disparado pelo navegador assim que a internet volta)
 self.addEventListener('sync', (event) => {
     if (event.tag === 'enviar-anuncios-offline') {
-        console.log('[Service Worker] Internet voltou! Sincronizando anúncios...');
+        console.log('[Service Worker] Sincronizando novos anúncios...');
         event.waitUntil(processarAnunciosOffline());
+    }
+    if (event.tag === 'editar-anuncios-offline') {
+        console.log('[Service Worker] Sincronizando edições de anúncios...');
+        event.waitUntil(processarEdicoesOffline());
     }
 });
 
-// 3. Função que pega do cofre e envia
-// 3. Função que pega do cofre e envia
+// 1. Processar Criação (Já existia)
 async function processarAnunciosOffline() {
     const db = await abrirCofreOffline();
     const tx = db.transaction('anuncios_pendentes', 'readonly');
@@ -130,8 +115,6 @@ async function processarAnunciosOffline() {
 
     for (const anuncio of anunciosGuardados) {
         try {
-            console.log('Enviando anúncio salvo offline:', anuncio);
-            
             const formData = new FormData();
             formData.append('usuario_id', anuncio.usuario_id);
             formData.append('titulo', anuncio.titulo);
@@ -139,7 +122,6 @@ async function processarAnunciosOffline() {
             formData.append('preco', anuncio.preco);
             formData.append('local', anuncio.local);
             formData.append('contato', anuncio.contato);
-            
             if (anuncio.imagem_0) formData.append('imagem_0', anuncio.imagem_0);
             if (anuncio.imagem_1) formData.append('imagem_1', anuncio.imagem_1);
             if (anuncio.imagem_2) formData.append('imagem_2', anuncio.imagem_2);
@@ -150,24 +132,62 @@ async function processarAnunciosOffline() {
             if (data.status === true) {
                 const txDelete = db.transaction('anuncios_pendentes', 'readwrite');
                 txDelete.objectStore('anuncios_pendentes').delete(anuncio.id);
-
-                // ========================================================
-                // NOVO: AVISA AS ABAS ABERTAS QUE O ENVIO DEU CERTO!
-                // ========================================================
                 self.clients.matchAll().then(clients => {
                     clients.forEach(client => client.postMessage({ type: 'SYNC_COMPLETO' }));
                 });
             }
-        } catch (err) {
-            console.log('Ainda sem conexão ou falha ao enviar. Tentará novamente depois.', err);
-            return; 
-        }
+        } catch (err) { return; }
     }
 
     self.registration.showNotification('Ocean Coffee', {
-        body: 'A internet voltou e seu anúncio foi publicado com sucesso! ☕',
+        body: 'A internet voltou e seu anúncio foi publicado! ☕',
         icon: 'IMG/Loginho2.png',
-        vibrate: [200, 100, 200],
+        data: { url: '/meus-anuncios.html' }
+    });
+}
+
+// 2. Processar Edição (NOVIDADE)
+async function processarEdicoesOffline() {
+    const db = await abrirCofreOffline();
+    const tx = db.transaction('edicoes_pendentes', 'readonly');
+    const store = tx.objectStore('edicoes_pendentes');
+    
+    const edicoesGuardadas = await new Promise(res => {
+        const req = store.getAll();
+        req.onsuccess = () => res(req.result);
+    });
+
+    if (edicoesGuardadas.length === 0) return;
+
+    for (const edicao of edicoesGuardadas) {
+        try {
+            const formData = new FormData();
+            formData.append('id', edicao.anuncio_id); // ID REAL NO MYSQL
+            formData.append('titulo', edicao.titulo);
+            formData.append('descricao', edicao.descricao);
+            formData.append('preco', edicao.preco);
+            formData.append('local', edicao.local);
+            formData.append('contato', edicao.contato);
+            formData.append('imagem_0', edicao.imagem_0);
+            formData.append('imagem_1', edicao.imagem_1);
+            formData.append('imagem_2', edicao.imagem_2);
+            
+            const response = await fetch('atualizar_anuncio.php', { method: 'POST', body: formData });
+            const data = await response.json();
+            
+            if (data.status === true) {
+                const txDelete = db.transaction('edicoes_pendentes', 'readwrite');
+                txDelete.objectStore('edicoes_pendentes').delete(edicao.id_local);
+                self.clients.matchAll().then(clients => {
+                    clients.forEach(client => client.postMessage({ type: 'SYNC_COMPLETO' }));
+                });
+            }
+        } catch (err) { return; }
+    }
+
+    self.registration.showNotification('Ocean Coffee', {
+        body: 'A internet voltou e as alterações no seu anúncio foram salvas! ✍️',
+        icon: 'IMG/Loginho2.png',
         data: { url: '/meus-anuncios.html' }
     });
 }
