@@ -208,128 +208,113 @@
     </div>
 
     <script>
-        function protegerPagina() {
-            const usuarioStr = localStorage.getItem("usuarioLogado");
-            if (!usuarioStr) { window.location.replace('Login.html'); }
-            return JSON.parse(usuarioStr);
-        }
-        const user = protegerPagina();
-        
-        function ensurePopupContainer() { let c = document.getElementById('popup-container'); if (!c) { c = document.createElement('div'); c.id = 'popup-container'; c.className = 'popup-container'; document.body.appendChild(c); } return c; }
-        function showPopup(message, type = 'info', duration = 3500) { const c = ensurePopupContainer(); const p = document.createElement('div'); p.className = `popup ${type}`; let i = 'fas fa-info-circle'; if (type === 'success') i = 'fas fa-check-circle'; if (type === 'error') i = 'fas fa-times-circle'; p.innerHTML = `<i class="${i}"></i> <div>${message}</div>`; c.prepend(p); requestAnimationFrame(() => p.classList.add('show')); setTimeout(() => { p.classList.remove('show'); p.addEventListener('transitionend', () => p.remove()); }, duration); }
+    function protegerPagina() {
+        const usuarioStr = localStorage.getItem("usuarioLogado");
+        if (!usuarioStr) { window.location.replace('Login.html'); }
+        return JSON.parse(usuarioStr);
+    }
+    const user = protegerPagina();
+    
+    function ensurePopupContainer() { let c = document.getElementById('popup-container'); if (!c) { c = document.createElement('div'); c.id = 'popup-container'; c.className = 'popup-container'; document.body.appendChild(c); } return c; }
+    function showPopup(message, type = 'info', duration = 4000) { const c = ensurePopupContainer(); const p = document.createElement('div'); p.className = `popup ${type}`; let i = 'fas fa-info-circle'; if (type === 'success') i = 'fas fa-check-circle'; if (type === 'error') i = 'fas fa-times-circle'; p.innerHTML = `<i class="${i}"></i> <div>${message}</div>`; c.prepend(p); requestAnimationFrame(() => p.classList.add('show')); setTimeout(() => { p.classList.remove('show'); p.addEventListener('transitionend', () => p.remove()); }, duration); }
 
-        document.addEventListener("DOMContentLoaded", () => {
-            // Preenche os dados visuais
-            if (user) {
-                const firstName = user.nome.split(' ')[0];
-                document.getElementById('welcome-message').textContent = firstName;
-                document.getElementById('mobile-welcome-message').textContent = `Olá, ${firstName}!`;
-                document.getElementById('user-email-sidebar').textContent = user.email;
-                document.getElementById('avatar-inicial').textContent = user.nome.charAt(0).toUpperCase();
-            }
-
-            // --- LÓGICA DO MENU HAMBÚRGUER ---
-            const menuToggle = document.getElementById('menu-toggle');
-            const mobileNav = document.getElementById('mobile-nav');
-            const navOverlay = document.getElementById('nav-overlay');
-
-            function closeMenu() {
-                if(mobileNav) mobileNav.classList.remove('is-open');
-                if(navOverlay) navOverlay.classList.remove('is-open');
-            }
-
-            if(menuToggle && mobileNav) {
-                menuToggle.addEventListener('click', () => {
-                    mobileNav.classList.toggle('is-open');
-                    if(navOverlay) navOverlay.classList.toggle('is-open');
-                });
-            }
-            
-            if(navOverlay) {
-                navOverlay.addEventListener('click', closeMenu);
-            }
-            
-            // --- LÓGICA DO POP-UP DE SAÍDA (LOGOUT) ---
-            const logoutModal = document.getElementById('logout-modal');
-            const btnCancelLogout = document.getElementById('btn-cancel-logout');
-            const btnConfirmLogout = document.getElementById('btn-confirm-logout');
-
-            const handleLogout = (e) => {
-                e.preventDefault(); 
-                closeMenu(); // Fecha o menu mobile se estiver aberto
-                logoutModal.classList.add('show');
+    // FUNÇÃO QUE ABRE O COFRE E SALVA OFFLINE
+    function guardarAnuncioOffline(dados) {
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open('OceanCoffeeDB', 1);
+            request.onupgradeneeded = (event) => {
+                const db = event.target.result;
+                db.createObjectStore('anuncios_pendentes', { keyPath: 'id', autoIncrement: true });
             };
+            request.onsuccess = (event) => {
+                const db = event.target.result;
+                const tx = db.transaction('anuncios_pendentes', 'readwrite');
+                const store = tx.objectStore('anuncios_pendentes');
+                store.add(dados);
+                tx.oncomplete = resolve;
+            };
+            request.onerror = reject;
+        });
+    }
 
-            if (btnCancelLogout) {
-                btnCancelLogout.addEventListener('click', () => {
-                    logoutModal.classList.remove('show');
-                });
-            }
+    document.addEventListener("DOMContentLoaded", () => {
+        if (user) {
+            const firstName = user.nome.split(' ')[0];
+            document.getElementById('welcome-message').textContent = firstName;
+            document.getElementById('mobile-welcome-message').textContent = `Olá, ${firstName}!`;
+            document.getElementById('user-email-sidebar').textContent = user.email;
+            document.getElementById('avatar-inicial').textContent = user.nome.charAt(0).toUpperCase();
+        }
 
-            if (btnConfirmLogout) {
-                btnConfirmLogout.addEventListener('click', () => {
-                    localStorage.removeItem("usuarioLogado");
-                    window.location.replace("index.html");
-                });
-            }
+        // Menu Mobile e Popups
+        const menuToggle = document.getElementById('menu-toggle');
+        const mobileNav = document.getElementById('mobile-nav');
+        const navOverlay = document.getElementById('nav-overlay');
+        function closeMenu() { if(mobileNav) mobileNav.classList.remove('is-open'); if(navOverlay) navOverlay.classList.remove('is-open'); }
+        if(menuToggle && mobileNav) { menuToggle.addEventListener('click', () => { mobileNav.classList.toggle('is-open'); if(navOverlay) navOverlay.classList.toggle('is-open'); }); }
+        if(navOverlay) navOverlay.addEventListener('click', closeMenu);
+        
+        const logoutModal = document.getElementById('logout-modal');
+        const handleLogout = (e) => { e.preventDefault(); closeMenu(); logoutModal.classList.add('show'); };
+        document.getElementById('btn-cancel-logout')?.addEventListener('click', () => logoutModal.classList.remove('show'));
+        document.getElementById('btn-confirm-logout')?.addEventListener('click', () => { localStorage.removeItem("usuarioLogado"); window.location.replace("index.html"); });
+        document.getElementById('logout-btn')?.addEventListener('click', handleLogout);
+        document.getElementById('mobile-logout-btn')?.addEventListener('click', handleLogout);
 
-            const logoutBtnDesk = document.getElementById('logout-btn');
-            const logoutBtnMob = document.getElementById('mobile-logout-btn');
-            if(logoutBtnDesk) logoutBtnDesk.addEventListener('click', handleLogout);
-            if(logoutBtnMob) logoutBtnMob.addEventListener('click', handleLogout);
+        // Formulário e Máscaras
+        const form = document.getElementById('anuncioForm');
+        const precoInput = document.getElementById('preco');
+        const telefoneInput = document.getElementById('telefone');
+        
+        precoInput.addEventListener('input', (e) => {
+            let value = e.target.value.replace(/\D/g, '');
+            value = (parseInt(value, 10) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            e.target.value = value;
+        });
+        precoInput.addEventListener('focus', (e) => { if (!e.target.value) e.target.value = 'R$ 0,00'; });
+        IMask(telefoneInput, { mask: [ { mask: '(00) 0000-0000' }, { mask: '(00) 00000-0000' } ] });
 
-            
-            // --- LÓGICA DO FORMULÁRIO E IMAGENS ---
-            const form = document.getElementById('anuncioForm');
-            const precoInput = document.getElementById('preco');
-            const telefoneInput = document.getElementById('telefone');
-            
-            precoInput.addEventListener('input', (e) => {
-                let value = e.target.value.replace(/\D/g, '');
-                value = (parseInt(value, 10) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-                e.target.value = value;
+        // Previews de Imagem
+        document.querySelectorAll('input[type="file"]').forEach(input => {
+            input.addEventListener('change', function(event) {
+                const file = event.target.files[0]; if (!file) return;
+                const previewId = this.dataset.previewId;
+                const previewElement = document.getElementById(previewId);
+                const placeholderElement = document.getElementById(previewId.replace('preview', 'placeholder'));
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    previewElement.src = e.target.result;
+                    previewElement.style.display = 'block';
+                    if (placeholderElement) placeholderElement.style.display = 'none';
+                };
+                reader.readAsDataURL(file);
             });
-            precoInput.addEventListener('focus', (e) => { if (!e.target.value) e.target.value = 'R$ 0,00'; });
+        });
 
-            IMask(telefoneInput, { mask: [ { mask: '(00) 0000-0000' }, { mask: '(00) 00000-0000' } ] });
+        // ENVIO DO FORMULÁRIO (HÍBRIDO: ONLINE E OFFLINE)
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('publicarBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Publicando...';
 
-            document.querySelectorAll('input[type="file"]').forEach(input => {
-                input.addEventListener('change', function(event) {
-                    const file = event.target.files[0]; if (!file) return;
-                    const previewId = this.dataset.previewId;
-                    const previewElement = document.getElementById(previewId);
-                    const placeholderElement = document.getElementById(previewId.replace('preview', 'placeholder'));
-                    const reader = new FileReader();
-                    reader.onload = function(e) {
-                        previewElement.src = e.target.result;
-                        previewElement.style.display = 'block';
-                        if (placeholderElement) placeholderElement.style.display = 'none';
-                    };
-                    reader.readAsDataURL(file);
-                });
-            });
+            try {
+                const titulo = document.getElementById("produto").value.trim();
+                const local = document.getElementById("local").value.trim();
+                const precoNumerico = precoInput.value.replace('R$', '').replace(/\./g, '').replace(',', '.').trim();
+                const descricao = document.getElementById("descricao").value.trim();
+                const contato = telefoneInput.value.replace(/\D/g, '');
 
-            form.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const btn = document.getElementById('publicarBtn');
-                btn.disabled = true;
-                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Publicando...';
+                if (!titulo || !local || !descricao || !contato) throw new Error("Preencha todos os campos obrigatórios.");
+                
+                const file1 = document.getElementById('imagem1').files[0];
+                const file2 = document.getElementById('imagem2').files[0];
+                const file3 = document.getElementById('imagem3').files[0];
 
-                try {
-                    const titulo = document.getElementById("produto").value.trim();
-                    const local = document.getElementById("local").value.trim();
-                    const precoNumerico = precoInput.value.replace('R$', '').replace(/\./g, '').replace(',', '.').trim();
-                    const descricao = document.getElementById("descricao").value.trim();
-                    const contato = telefoneInput.value.replace(/\D/g, '');
+                if (!file1) throw new Error("Selecione pelo menos a Imagem Principal.");
 
-                    if (!titulo || !local || !descricao || !contato) throw new Error("Preencha todos os campos obrigatórios.");
-                    
-                    const file1 = document.getElementById('imagem1').files[0];
-                    const file2 = document.getElementById('imagem2').files[0];
-                    const file3 = document.getElementById('imagem3').files[0];
-
-                    if (!file1) throw new Error("Selecione pelo menos a Imagem Principal.");
-
+                // 1. SE TIVER INTERNET: FLUXO NORMAL DA API PHP
+                if (navigator.onLine) {
                     const formData = new FormData();
                     formData.append('usuario_id', user.id);
                     formData.append('titulo', titulo);
@@ -337,16 +322,11 @@
                     formData.append('preco', precoNumerico);
                     formData.append('local', local);
                     formData.append('contato', contato);
-                    
                     if (file1) formData.append('imagem_0', file1);
                     if (file2) formData.append('imagem_1', file2);
                     if (file3) formData.append('imagem_2', file3);
                     
-                    const response = await fetch('salvar_anuncio.php', {
-                        method: 'POST',
-                        body: formData
-                    });
-                    
+                    const response = await fetch('salvar_anuncio.php', { method: 'POST', body: formData });
                     const data = await response.json();
                     
                     if (data.status === true) {
@@ -355,75 +335,44 @@
                     } else {
                         throw new Error(data.mensagem);
                     }
+                } 
+                // 2. SE NÃO TIVER INTERNET: GUARDA NO BANCO DE DADOS INVISÍVEL
+                else {
+                    const dadosOffline = {
+                        usuario_id: user.id,
+                        titulo: titulo,
+                        descricao: descricao,
+                        preco: precoNumerico,
+                        local: local,
+                        contato: contato,
+                        imagem_0: file1, // O Chrome sabe guardar arquivos de imagem!
+                        imagem_1: file2 || null,
+                        imagem_2: file3 || null,
+                        dataRegistro: new Date().toISOString()
+                    };
 
-                } catch (err) {
-                    showPopup(err.message, 'error');
-                } finally {
-                    btn.disabled = false;
-                    btn.innerHTML = '<i class="fas fa-paper-plane"></i> Enviar para Análise';
+                    await guardarAnuncioOffline(dadosOffline);
+
+                    // Pede pro Service Worker ficar em alerta e enviar quando a internet voltar
+                    if ('serviceWorker' in navigator && 'SyncManager' in window) {
+                        const sw = await navigator.serviceWorker.ready;
+                        await sw.sync.register('enviar-anuncios-offline');
+                        
+                        showPopup("Sem internet! Seu anúncio foi salvo e será enviado assim que você reconectar.", "info", 5000);
+                        // Joga a pessoa pra tela de Meus Anúncios
+                        setTimeout(() => window.location.href = "meus-anuncios.html", 4000);
+                    } else {
+                        throw new Error("Você está sem conexão, tente quando a internet voltar.");
+                    }
                 }
-            });
+            } catch (err) {
+                showPopup(err.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-paper-plane"></i> Enviar para Análise';
+            }
         });
-    </script>
-
-    <script>
-  // Função para salvar os dados preenchidos no IndexedDB (Cofre Offline)
-  function guardarAnuncioOffline(dados) {
-      return new Promise((resolve, reject) => {
-          const request = indexedDB.open('OceanCoffeeDB', 1);
-          request.onupgradeneeded = (event) => {
-              const db = event.target.result;
-              db.createObjectStore('anuncios_pendentes', { keyPath: 'id', autoIncrement: true });
-          };
-          request.onsuccess = (event) => {
-              const db = event.target.result;
-              const tx = db.transaction('anuncios_pendentes', 'readwrite');
-              const store = tx.objectStore('anuncios_pendentes');
-              store.add(dados); // Salva os dados
-              tx.oncomplete = resolve;
-          };
-      });
-  }
-
-  // Pegue o ID do seu formulário (Mude 'meu-formulario' para o ID real que você usa)
-  const formulario = document.getElementById('meu-formulario');
-
-  if(formulario) {
-      formulario.addEventListener('submit', async (e) => {
-          e.preventDefault(); // Impede a página de recarregar
-
-          // 1. Coletar as informações que a pessoa digitou
-          const dadosDoAnuncio = {
-              titulo: document.getElementById('titulo').value, // Troque pelos IDs reais dos seus inputs
-              descricao: document.getElementById('descricao').value,
-              dataGuardada: new Date().toISOString()
-          };
-
-          // 2. VERIFICA SE TEM INTERNET
-          if (navigator.onLine) {
-              console.log("Com internet! Pode enviar direto.");
-              // Aqui você coloca o seu código normal que envia o formulário...
-              alert("Anúncio enviado normalmente!");
-
-          } else {
-              // 3. SEM INTERNET: GUARDA NO COFRE OFFLINE
-              console.log("Sem internet. Guardando offline...");
-              await guardarAnuncioOffline(dadosDoAnuncio);
-              
-              // 4. AVISA O SERVICE WORKER PARA ACORDAR QUANDO A INTERNET VOLTAR
-              if ('serviceWorker' in navigator && 'SyncManager' in window) {
-                  const sw = await navigator.serviceWorker.ready;
-                  // Registra a "tarefa" para o momento que a rede voltar
-                  await sw.sync.register('enviar-anuncios-offline');
-                  
-                  // Mensagem tranquilizando o usuário
-                  alert("Você está sem internet! 📡\nFique tranquilo, seu anúncio foi guardado. Você pode até fechar o site, ele será enviado automaticamente quando o celular conectar novamente!");
-              } else {
-                  alert("Você está sem internet no momento. Tente novamente mais tarde.");
-              }
-          }
-      });
-  }
+    });
 </script>
 </body>
 </html>

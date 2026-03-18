@@ -130,20 +130,35 @@ async function processarAnunciosOffline() {
 
     for (const anuncio of anunciosGuardados) {
         try {
-            // ======================================================
-            // AQUI VOCÊ FARIA O ENVIO REAL PARA O SEU BACKEND/API
-            // ======================================================
-            console.log('Enviando anúncio salvo:', anuncio);
+            console.log('Enviando anúncio salvo offline:', anuncio);
             
-            // Exemplo de como seria o envio:
-            // await fetch('/api/salvar_anuncio', { method: 'POST', body: JSON.stringify(anuncio) });
+            // Monta o FormData exatamente igual ao seu anuncie.html para o PHP entender
+            const formData = new FormData();
+            formData.append('usuario_id', anuncio.usuario_id);
+            formData.append('titulo', anuncio.titulo);
+            formData.append('descricao', anuncio.descricao);
+            formData.append('preco', anuncio.preco);
+            formData.append('local', anuncio.local);
+            formData.append('contato', anuncio.contato);
             
-            // Se o envio deu certo, apagamos do cofre offline para não enviar duplicado
-            const txDelete = db.transaction('anuncios_pendentes', 'readwrite');
-            txDelete.objectStore('anuncios_pendentes').delete(anuncio.id);
+            // Reanexando as imagens que estavam no cofre
+            if (anuncio.imagem_0) formData.append('imagem_0', anuncio.imagem_0);
+            if (anuncio.imagem_1) formData.append('imagem_1', anuncio.imagem_1);
+            if (anuncio.imagem_2) formData.append('imagem_2', anuncio.imagem_2);
+            
+            // Dispara para o PHP
+            const response = await fetch('salvar_anuncio.php', { method: 'POST', body: formData });
+            const data = await response.json();
+            
+            if (data.status === true) {
+                // Se o envio deu certo no PHP, apagamos do cofre offline para não duplicar
+                const txDelete = db.transaction('anuncios_pendentes', 'readwrite');
+                txDelete.objectStore('anuncios_pendentes').delete(anuncio.id);
+            }
 
         } catch (err) {
-            console.log('Falha ao enviar anúncio offline. O sistema tentará novamente depois.');
+            console.log('Ainda sem conexão ou falha ao enviar. Tentará novamente depois.', err);
+            return; // Interrompe para tentar de novo na próxima vez
         }
     }
 
@@ -151,6 +166,7 @@ async function processarAnunciosOffline() {
     self.registration.showNotification('Ocean Coffee', {
         body: 'A internet voltou e seu anúncio foi publicado com sucesso! ☕',
         icon: 'IMG/Loginho2.png',
-        vibrate: [200, 100, 200]
+        vibrate: [200, 100, 200],
+        data: { url: '/meus-anuncios.html' }
     });
 }
