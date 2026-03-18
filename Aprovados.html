@@ -444,7 +444,7 @@
         <div id="fullscreen-counter" class="fullscreen-counter"></div>
     </div>
 
-    <script type="module">
+ <script type="module">
         // Importa a função de layout local
         import { initAdminPage } from './JS/admin-layout.js';
     
@@ -471,6 +471,49 @@
         const searchInputEl = document.getElementById("searchInput");
         const headerTitleEl = document.getElementById('headerTitle');
     
+        // =============================================================
+        // GERENCIAR COFRE OFFLINE DO ADMIN (Exclusões)
+        // =============================================================
+        function abrirBanco() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open('OceanCoffeeDB', 4); // Usamos a mesma versão 4!
+                request.onupgradeneeded = (event) => {
+                    const db = event.target.result;
+                    if (!db.objectStoreNames.contains('exclusoes_pendentes')) db.createObjectStore('exclusoes_pendentes', { keyPath: 'id_local', autoIncrement: true });
+                };
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = reject;
+            });
+        }
+
+        // Lê exclusões pendentes para esconder da tela
+        async function lerExclusoesOffline() {
+            try {
+                const db = await abrirBanco();
+                const tx = db.transaction('exclusoes_pendentes', 'readonly');
+                const req = tx.objectStore('exclusoes_pendentes').getAll();
+                return new Promise(res => { req.onsuccess = () => res((req.result || []).map(ad => String(ad.anuncio_id))); });
+            } catch { return []; }
+        }
+
+        // Guarda exclusão quando não há rede
+        async function guardarExclusaoOffline(adId) {
+            const db = await abrirBanco();
+            const tx = db.transaction('exclusoes_pendentes', 'readwrite');
+            tx.objectStore('exclusoes_pendentes').add({ anuncio_id: adId, data_exclusao: new Date().toISOString() });
+            return new Promise(res => { tx.oncomplete = res; });
+        }
+
+        // Recarrega a tabela quando a internet voltar e o robô enviar!
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.addEventListener('message', (event) => {
+                // Escuta o grito do robô
+                if (event.data && (event.data.type === 'SYNC_COMPLETO' || event.data.type === 'SYNC_COMPLETO_ADMIN')) { 
+                    carregarAprovados(); 
+                }
+            });
+        }
+
         // --- Funções Utilitárias ---
         function showToast(message, type = 'success') {
             const toast = document.createElement('div');
@@ -510,17 +553,19 @@
         }
     
         // --- Funções Principais ---
-        async function carregarAprovados() {
+        window.carregarAprovados = async function() {
             if (!tbodyEl) return;
             tbodyEl.innerHTML = `<tr><td colspan="5">Carregando anúncios aprovados...</td></tr>`;
             try {
-                // Pede os dados dos anúncios aprovados ao PHP
                 const response = await fetch('admin_listar_aprovados.php');
                 const data = await response.json();
     
                 if (!data.status) throw new Error(data.mensagem);
                 
-                todosAprovados = data.aprovados || [];
+                // Pega os anúncios que o admin apagou offline e esconde-os visualmente
+                const exclusoesOffline = await lerExclusoesOffline();
+                todosAprovados = (data.aprovados || []).filter(anuncio => !exclusoesOffline.includes(String(anuncio.id)));
+                
                 aprovadosFiltrados = todosAprovados;
                 currentPage = 1;
                 
@@ -530,8 +575,7 @@
                 displayPage();
             } catch (error) {
                 console.error("Erro ao carregar anúncios aprovados:", error.message);
-                showToast("Erro ao carregar anúncios", "error");
-                if (tbodyEl) tbodyEl.innerHTML = `<tr><td colspan="5">Erro ao carregar dados.</td></tr>`;
+                if (tbodyEl) tbodyEl.innerHTML = `<tr><td colspan="5" style="color:red;">Você está sem internet ou o servidor falhou. Aguardando rede...</td></tr>`;
             }
         }
     
@@ -557,7 +601,6 @@
                 tr.setAttribute('data-id', produto.id);
                 const itemIndex = startIndex + index + 1;
                 
-                // Lida com a data vinda do MySQL
                 const dataString = produto.data_criacao || produto.data || new Date().toISOString();
                 const dataUTC = new Date(dataString.includes('Z') ? dataString : dataString + "Z");
                 
@@ -601,42 +644,22 @@
                 }
                 return button;
             };
-            const createEllipsis = () => {
-                const span = document.createElement('span');
-                span.className = 'ellipsis';
-                span.textContent = '...';
-                return span;
-            };
+            const createEllipsis = () => { const span = document.createElement('span'); span.className = 'ellipsis'; span.textContent = '...'; return span; };
     
             controls.appendChild(createButton('&laquo; Anterior', currentPage - 1, currentPage === 1));
-    
-            const maxVisibleButtons = 5;
-            let startPage, endPage;
-            if (pageCount <= maxVisibleButtons) {
-                startPage = 1; endPage = pageCount;
-            } else {
+            const maxVisibleButtons = 5; let startPage, endPage;
+            if (pageCount <= maxVisibleButtons) { startPage = 1; endPage = pageCount; } 
+            else {
                 const maxPagesShown = maxVisibleButtons - 2;
                 let maxPagesBeforeCurrent = Math.floor(maxPagesShown / 2);
                 let maxPagesAfterCurrent = Math.ceil(maxPagesShown / 2) - 1;
-                if (currentPage <= maxPagesBeforeCurrent) {
-                    startPage = 1; endPage = maxPagesShown;
-                } else if (currentPage + maxPagesAfterCurrent >= pageCount) {
-                    startPage = pageCount - maxPagesShown + 1; endPage = pageCount;
-                } else {
-                    startPage = currentPage - maxPagesBeforeCurrent; endPage = currentPage + maxPagesAfterCurrent;
-                }
+                if (currentPage <= maxPagesBeforeCurrent) { startPage = 1; endPage = maxPagesShown; } 
+                else if (currentPage + maxPagesAfterCurrent >= pageCount) { startPage = pageCount - maxPagesShown + 1; endPage = pageCount; } 
+                else { startPage = currentPage - maxPagesBeforeCurrent; endPage = currentPage + maxPagesAfterCurrent; }
             }
-            if (startPage > 1) {
-                controls.appendChild(createButton('1', 1));
-                if (startPage > 2) controls.appendChild(createEllipsis());
-            }
-            for (let i = startPage; i <= endPage; i++) {
-                controls.appendChild(createButton(i, i, false, i === currentPage));
-            }
-            if (endPage < pageCount) {
-                if (endPage < pageCount - 1) controls.appendChild(createEllipsis());
-                controls.appendChild(createButton(pageCount, pageCount));
-            }
+            if (startPage > 1) { controls.appendChild(createButton('1', 1)); if (startPage > 2) controls.appendChild(createEllipsis()); }
+            for (let i = startPage; i <= endPage; i++) { controls.appendChild(createButton(i, i, false, i === currentPage)); }
+            if (endPage < pageCount) { if (endPage < pageCount - 1) controls.appendChild(createEllipsis()); controls.appendChild(createButton(pageCount, pageCount)); }
             controls.appendChild(createButton('Próximo &raquo;', currentPage + 1, currentPage === pageCount));
     
             paginationContainerEl.appendChild(pageInfo);
@@ -649,18 +672,14 @@
             if (!produto) return;
             
             document.getElementById('modal-descricao').textContent = produto.descricao || 'Não informado.';
-            
             const dataString = produto.data_criacao || produto.data || new Date().toISOString();
             const dataUTC = new Date(dataString.includes('Z') ? dataString : dataString + "Z");
             document.getElementById('modal-data').textContent = dataUTC.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
-            
             document.getElementById('modal-local').textContent = produto.local || 'Não informado.';
             document.getElementById('modal-contato').textContent = produto.contato || 'Não informado.';
             document.getElementById('modal-preco').textContent = parseFloat(produto.preco).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     
             const carrosselContainer = document.getElementById('modal-carrossel');
-            
-            // Agrupa as imagens vindas do MySQL
             imagensCarrosselAtual = [];
             if(produto.imagem_0 && produto.imagem_0.trim() !== '') imagensCarrosselAtual.push(produto.imagem_0);
             if(produto.imagem_1 && produto.imagem_1.trim() !== '') imagensCarrosselAtual.push(produto.imagem_1);
@@ -684,71 +703,55 @@
         };
         
         window.fecharModalDetalhes = () => { if (detalhesModalEl) detalhesModalEl.classList.remove('visible'); }; 
+        window.mudarImagemModal=(e,t)=>{ e.stopPropagation(); carrosselAtualIndex=(carrosselAtualIndex+t+imagensCarrosselAtual.length)%imagensCarrosselAtual.length; const imgElement = document.getElementById("carrossel-img-modal"); imgElement.src=imagensCarrosselAtual[carrosselAtualIndex]; imgElement.setAttribute("onclick",`abrirModalFullscreen(${carrosselAtualIndex})`); };
+        window.abrirModalFullscreen = (index) => { event && event.stopPropagation(); if(!imagensCarrosselAtual || imagensCarrosselAtual.length === 0 || !fullscreenModalEl) return; fullscreenIndex = index; atualizarImagemFullscreen(); fullscreenModalEl.classList.add("visible"); };
+        window.fecharModalFullscreen = () => { event && event.stopPropagation(); if (fullscreenModalEl) fullscreenModalEl.classList.remove("visible"); };
+        window.mudarImagemFullscreen = (direction) => { event && event.stopPropagation(); fullscreenIndex = (fullscreenIndex + direction + imagensCarrosselAtual.length) % imagensCarrosselAtual.length; atualizarImagemFullscreen(); };
+        function atualizarImagemFullscreen(){ if(!imagensCarrosselAtual || imagensCarrosselAtual.length === 0 || !fullscreenModalEl) return; document.getElementById("fullscreen-image").src=imagensCarrosselAtual[fullscreenIndex]; document.getElementById("fullscreen-counter").textContent=`${fullscreenIndex+1} / ${imagensCarrosselAtual.length}`; }
     
-        window.mudarImagemModal=(e,t)=>{
-            e.stopPropagation();
-            carrosselAtualIndex=(carrosselAtualIndex+t+imagensCarrosselAtual.length)%imagensCarrosselAtual.length;
-            const imgElement = document.getElementById("carrossel-img-modal");
-            imgElement.src=imagensCarrosselAtual[carrosselAtualIndex];
-            imgElement.setAttribute("onclick",`abrirModalFullscreen(${carrosselAtualIndex})`);
-         };
-         
-        window.abrirModalFullscreen = (index) => {
-            event && event.stopPropagation();
-            if(!imagensCarrosselAtual || imagensCarrosselAtual.length === 0 || !fullscreenModalEl) return;
-            fullscreenIndex = index;
-            atualizarImagemFullscreen();
-            fullscreenModalEl.classList.add("visible");
-         };
-         
-        window.fecharModalFullscreen = () => {
-            event && event.stopPropagation();
-            if (fullscreenModalEl) fullscreenModalEl.classList.remove("visible");
-         };
-         
-        window.mudarImagemFullscreen = (direction) => {
-             event && event.stopPropagation();
-            fullscreenIndex = (fullscreenIndex + direction + imagensCarrosselAtual.length) % imagensCarrosselAtual.length;
-            atualizarImagemFullscreen();
-         };
-         
-        function atualizarImagemFullscreen(){
-            if(!imagensCarrosselAtual || imagensCarrosselAtual.length === 0 || !fullscreenModalEl) return;
-            document.getElementById("fullscreen-image").src=imagensCarrosselAtual[fullscreenIndex];
-            document.getElementById("fullscreen-counter").textContent=`${fullscreenIndex+1} / ${imagensCarrosselAtual.length}`;
-        }
-    
-        // --- Funções de Ação ---
+        // ======================================================================
+        // AÇÕES OFFLINE: EXCLUSÃO DO ADMIN
+        // ======================================================================
          async function excluirAnuncio(id, nomeProduto) {
              const confirmed = await showConfirmationPopup(`Deseja realmente excluir o anúncio "${nomeProduto}"?`);
              if (!confirmed) return;
              
              try {
-                // Reutiliza o ficheiro de exclusão de anúncios que já criámos!
                 const response = await fetch('excluir_anuncio.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ id: id })
                 });
                 const data = await response.json();
-                
                 if (!data.status) throw new Error(data.mensagem);
                 
                 showToast(`Anúncio excluído com sucesso!`, 'success');
-                
                 todosAprovados = todosAprovados.filter(anuncio => anuncio.id !== id);
                 aprovadosFiltrados = aprovadosFiltrados.filter(anuncio => anuncio.id !== id);
                 
                 const totalPages = Math.ceil(aprovadosFiltrados.length / rowsPerPage);
-                if (currentPage > totalPages && totalPages > 0) {
-                    currentPage = totalPages;
-                }
+                if (currentPage > totalPages && totalPages > 0) currentPage = totalPages;
                 
                 displayPage(); 
                 
-             } catch (error) {
-                showToast(`Erro ao excluir: ${error.message}`, 'error');
-                console.error('Erro ao excluir:', error);
+             } catch (networkError) {
+                // INTERNET CAIU NA HORA DE EXCLUIR? SALVA OFFLINE
+                if (!navigator.onLine || networkError.message.includes('Failed to fetch') || networkError.message.includes('NetworkError')) {
+                    await guardarExclusaoOffline(id);
+                    if ('serviceWorker' in navigator && 'SyncManager' in window) {
+                        const sw = await navigator.serviceWorker.ready;
+                        // Usa a mesma gaveta "excluir-anuncios-offline" que já está lá no sw.js!
+                        await sw.sync.register('excluir-anuncios-offline');
+                        showToast("Lixeira Salva Offline. A exclusão será finalizada quando a internet voltar.", "info");
+                        
+                        // Remove da tela imediatamente
+                        todosAprovados = todosAprovados.filter(ad => ad.id != id);
+                        aprovadosFiltrados = aprovadosFiltrados.filter(ad => ad.id != id);
+                        displayPage(); 
+                    }
+                } else {
+                    showToast(`Erro ao excluir: ${networkError.message}`, 'error');
+                }
              }
           };
     
@@ -763,45 +766,22 @@
                         (p.titulo || "").toLowerCase().includes(termo) ||
                         (p.nome_usuario || "").toLowerCase().includes(termo)
                     );
-                    currentPage = 1;
-                    displayPage();
+                    currentPage = 1; displayPage();
                 });
             }
             
-            document.getElementById("aprovados-back-btn").addEventListener("click", (e) => {
-                e.preventDefault();
-                history.back(); 
-            });
+            document.getElementById("aprovados-back-btn").addEventListener("click", (e) => { e.preventDefault(); history.back(); });
     
             window.addEventListener("keydown",e=>{
-                if(fullscreenModalEl && fullscreenModalEl.classList.contains("visible")){
-                    if(e.key === "Escape") fecharModalFullscreen();
-                    if(e.key === "ArrowRight") mudarImagemFullscreen(1);
-                    if(e.key === "ArrowLeft") mudarImagemFullscreen(-1);
-                } else if (detalhesModalEl && detalhesModalEl.classList.contains("visible")){
-                    if(e.key === "Escape") fecharModalDetalhes();
-                }
+                if(fullscreenModalEl && fullscreenModalEl.classList.contains("visible")){ if(e.key === "Escape") fecharModalFullscreen(); if(e.key === "ArrowRight") mudarImagemFullscreen(1); if(e.key === "ArrowLeft") mudarImagemFullscreen(-1);
+                } else if (detalhesModalEl && detalhesModalEl.classList.contains("visible")){ if(e.key === "Escape") fecharModalDetalhes(); }
             });
     
-            if (detalhesModalEl) {
-                detalhesModalEl.addEventListener('click', (e) => {
-                     if (e.target === detalhesModalEl) fecharModalDetalhes();
-                });
-            }
-            if (fullscreenModalEl) {
-                fullscreenModalEl.addEventListener('click', (e) => {
-                     if (e.target === fullscreenModalEl) fecharModalFullscreen();
-                });
-            }
+            if (detalhesModalEl) { detalhesModalEl.addEventListener('click', (e) => { if (e.target === detalhesModalEl) fecharModalDetalhes(); }); }
+            if (fullscreenModalEl) { fullscreenModalEl.addEventListener('click', (e) => { if (e.target === fullscreenModalEl) fecharModalFullscreen(); }); }
             
             const logoutBtns = document.querySelectorAll('.menu-item-logout');
-            logoutBtns.forEach(btn => btn.addEventListener('click', (e) => {
-                e.preventDefault();
-                if(confirm("Tem certeza que deseja sair?")) {
-                    localStorage.removeItem("usuarioLogado");
-                    window.location.replace("index.html");
-                }
-            }));
+            logoutBtns.forEach(btn => btn.addEventListener('click', (e) => { e.preventDefault(); if(confirm("Tem certeza que deseja sair?")) { localStorage.removeItem("usuarioLogado"); window.location.replace("index.html"); } }));
         });
     </script>
 </body>
