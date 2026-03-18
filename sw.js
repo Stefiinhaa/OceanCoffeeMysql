@@ -2,17 +2,13 @@
 
 const CACHE_NAME = 'ocean-coffee-cache-v1';
 
-self.addEventListener('install', (event) => {
-    self.skipWaiting();
-});
+self.addEventListener('install', (event) => { self.skipWaiting(); });
 
 self.addEventListener('activate', (event) => {
     event.waitUntil(
         caches.keys().then(cacheNames => {
             return Promise.all(
-                cacheNames.map(cache => {
-                    if (cache !== CACHE_NAME) return caches.delete(cache);
-                })
+                cacheNames.map(cache => { if (cache !== CACHE_NAME) return caches.delete(cache); })
             );
         }).then(() => clients.claim())
     );
@@ -20,44 +16,26 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', function(event) {
     if (event.request.method !== 'GET' || !event.request.url.startsWith('http')) return;
-
     event.respondWith(
         fetch(event.request)
             .then(function(response) {
                 const responseClone = response.clone();
-                caches.open(CACHE_NAME).then(function(cache) {
-                    cache.put(event.request, responseClone);
-                });
+                caches.open(CACHE_NAME).then(function(cache) { cache.put(event.request, responseClone); });
                 return response;
             })
-            .catch(function() {
-                return caches.match(event.request);
-            })
+            .catch(function() { return caches.match(event.request); })
     );
 });
 
 self.addEventListener('push', function(event) {
-    let titulo = 'Ocean Coffee';
-    let msg = 'Tem uma nova notificação!';
-
+    let titulo = 'Ocean Coffee'; let msg = 'Tem uma nova notificação!';
     if (event.data) {
         try {
             const data = event.data.json();
-            titulo = data.title || titulo;
-            msg = data.body || data.message || msg;
-        } catch (e) {
-            msg = event.data.text() || msg;
-        }
+            titulo = data.title || titulo; msg = data.body || data.message || msg;
+        } catch (e) { msg = event.data.text() || msg; }
     }
-
-    const options = {
-        body: msg,
-        icon: 'IMG/Loginho2.png',
-        badge: 'IMG/Loginho2.png',
-        vibrate: [200, 100, 200],
-        data: { url: '/' }
-    };
-
+    const options = { body: msg, icon: 'IMG/Loginho2.png', badge: 'IMG/Loginho2.png', vibrate: [200, 100, 200], data: { url: '/' } };
     event.waitUntil(self.registration.showNotification(titulo, options));
 });
 
@@ -67,19 +45,20 @@ self.addEventListener('notificationclick', function(event) {
 });
 
 // ========================================================================
-// MÁGICA DE SINCRONIZAÇÃO EM SEGUNDO PLANO (CRIAR, EDITAR E EXCLUIR)
+// MÁGICA DE SINCRONIZAÇÃO EM SEGUNDO PLANO (CRIAR, EDITAR, EXCLUIR E AÇÕES DO ADMIN)
 // ========================================================================
 
 function abrirCofreOffline() {
     return new Promise((resolve, reject) => {
-        // VERSÃO 3: Agora com suporte a exclusões!
-        const request = indexedDB.open('OceanCoffeeDB', 3); 
+        // VERSÃO 4: Adicionada a gaveta de ações do Administrador
+        const request = indexedDB.open('OceanCoffeeDB', 4); 
         
         request.onupgradeneeded = (event) => {
             const db = event.target.result;
             if (!db.objectStoreNames.contains('anuncios_pendentes')) db.createObjectStore('anuncios_pendentes', { keyPath: 'id', autoIncrement: true });
             if (!db.objectStoreNames.contains('edicoes_pendentes')) db.createObjectStore('edicoes_pendentes', { keyPath: 'id_local', autoIncrement: true });
             if (!db.objectStoreNames.contains('exclusoes_pendentes')) db.createObjectStore('exclusoes_pendentes', { keyPath: 'id_local', autoIncrement: true });
+            if (!db.objectStoreNames.contains('admin_acoes_pendentes')) db.createObjectStore('admin_acoes_pendentes', { keyPath: 'id_local', autoIncrement: true });
         };
         request.onsuccess = () => resolve(request.result);
         request.onerror = () => reject('Erro ao abrir o cofre offline');
@@ -87,15 +66,12 @@ function abrirCofreOffline() {
 }
 
 self.addEventListener('sync', (event) => {
-    if (event.tag === 'enviar-anuncios-offline') {
-        event.waitUntil(processarAnunciosOffline());
-    }
-    if (event.tag === 'editar-anuncios-offline') {
-        event.waitUntil(processarEdicoesOffline());
-    }
-    if (event.tag === 'excluir-anuncios-offline') {
-        console.log('[Service Worker] Sincronizando exclusões...');
-        event.waitUntil(processarExclusoesOffline());
+    if (event.tag === 'enviar-anuncios-offline') event.waitUntil(processarAnunciosOffline());
+    if (event.tag === 'editar-anuncios-offline') event.waitUntil(processarEdicoesOffline());
+    if (event.tag === 'excluir-anuncios-offline') event.waitUntil(processarExclusoesOffline());
+    if (event.tag === 'admin-acoes-offline') {
+        console.log('[Service Worker] Sincronizando ações do admin...');
+        event.waitUntil(processarAcoesAdminOffline());
     }
 });
 
@@ -103,8 +79,7 @@ self.addEventListener('sync', (event) => {
 async function processarAnunciosOffline() {
     const db = await abrirCofreOffline();
     const tx = db.transaction('anuncios_pendentes', 'readonly');
-    const store = tx.objectStore('anuncios_pendentes');
-    const anunciosGuardados = await new Promise(res => { const req = store.getAll(); req.onsuccess = () => res(req.result); });
+    const anunciosGuardados = await new Promise(res => { const req = tx.objectStore('anuncios_pendentes').getAll(); req.onsuccess = () => res(req.result); });
     if (anunciosGuardados.length === 0) return;
 
     for (const anuncio of anunciosGuardados) {
@@ -121,15 +96,14 @@ async function processarAnunciosOffline() {
             }
         } catch (err) { return; }
     }
-    self.registration.showNotification('Ocean Coffee', { body: 'A internet voltou e seu anúncio foi publicado! ☕', icon: 'IMG/Loginho2.png', data: { url: '/meus-anuncios.html' } });
+    self.registration.showNotification('Ocean Coffee', { body: 'A internet voltou e seu anúncio foi publicado!', icon: 'IMG/Loginho2.png', data: { url: '/meus-anuncios.html' } });
 }
 
 // 2. Processar Edição
 async function processarEdicoesOffline() {
     const db = await abrirCofreOffline();
     const tx = db.transaction('edicoes_pendentes', 'readonly');
-    const store = tx.objectStore('edicoes_pendentes');
-    const edicoesGuardadas = await new Promise(res => { const req = store.getAll(); req.onsuccess = () => res(req.result); });
+    const edicoesGuardadas = await new Promise(res => { const req = tx.objectStore('edicoes_pendentes').getAll(); req.onsuccess = () => res(req.result); });
     if (edicoesGuardadas.length === 0) return;
 
     for (const edicao of edicoesGuardadas) {
@@ -145,32 +119,60 @@ async function processarEdicoesOffline() {
             }
         } catch (err) { return; }
     }
-    self.registration.showNotification('Ocean Coffee', { body: 'A internet voltou e as alterações no seu anúncio foram salvas! ✍️', icon: 'IMG/Loginho2.png', data: { url: '/meus-anuncios.html' } });
+    self.registration.showNotification('Ocean Coffee', { body: 'A internet voltou e as alterações no seu anúncio foram salvas!', icon: 'IMG/Loginho2.png', data: { url: '/meus-anuncios.html' } });
 }
 
-// 3. Processar Exclusão (NOVIDADE)
+// 3. Processar Exclusão do Cliente
 async function processarExclusoesOffline() {
     const db = await abrirCofreOffline();
     const tx = db.transaction('exclusoes_pendentes', 'readonly');
-    const store = tx.objectStore('exclusoes_pendentes');
-    const exclusoesGuardadas = await new Promise(res => { const req = store.getAll(); req.onsuccess = () => res(req.result); });
+    const exclusoesGuardadas = await new Promise(res => { const req = tx.objectStore('exclusoes_pendentes').getAll(); req.onsuccess = () => res(req.result); });
     if (exclusoesGuardadas.length === 0) return;
 
     for (const exclusao of exclusoesGuardadas) {
         try {
-            const response = await fetch('excluir_anuncio.php', { 
-                method: 'POST', 
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id: exclusao.anuncio_id }) 
-            });
+            const response = await fetch('excluir_anuncio.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: exclusao.anuncio_id }) });
             const data = await response.json();
             if (data.status === true) {
-                const txDelete = db.transaction('exclusoes_pendentes', 'readwrite'); 
-                txDelete.objectStore('exclusoes_pendentes').delete(exclusao.id_local);
+                const txDelete = db.transaction('exclusoes_pendentes', 'readwrite'); txDelete.objectStore('exclusoes_pendentes').delete(exclusao.id_local);
                 self.clients.matchAll().then(clients => { clients.forEach(client => client.postMessage({ type: 'SYNC_COMPLETO' })); });
             }
         } catch (err) { return; }
     }
-    // A exclusão aconteceu invisivelmente, podemos avisar o usuário discretamente
-    self.registration.showNotification('Ocean Coffee', { body: 'Lixeira sincronizada: anúncios excluídos com sucesso. 🗑️', icon: 'IMG/Loginho2.png', data: { url: '/meus-anuncios.html' } });
+    self.registration.showNotification('Ocean Coffee', { body: 'Lixeira sincronizada com sucesso.', icon: 'IMG/Loginho2.png', data: { url: '/meus-anuncios.html' } });
+}
+
+// 4. Processar Ações do Admin (Aprovar / Rejeitar) - NOVIDADE!
+async function processarAcoesAdminOffline() {
+    const db = await abrirCofreOffline();
+    const tx = db.transaction('admin_acoes_pendentes', 'readonly');
+    const acoesGuardadas = await new Promise(res => { const req = tx.objectStore('admin_acoes_pendentes').getAll(); req.onsuccess = () => res(req.result); });
+    if (acoesGuardadas.length === 0) return;
+
+    for (const acao of acoesGuardadas) {
+        try {
+            let url = '', corpo = {};
+            
+            // Verifica se a ordem é aprovar ou rejeitar
+            if (acao.tipo === 'aprovar') {
+                url = 'atualizar_status.php';
+                corpo = { id: acao.anuncio_id, status: 'aprovado' };
+            } else if (acao.tipo === 'rejeitar') {
+                url = 'admin_rejeitar_anuncio.php';
+                corpo = { id: acao.anuncio_id, motivo: acao.motivo };
+            }
+
+            const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(corpo) });
+            const data = await response.json();
+            
+            if (data.status === true) {
+                const txDelete = db.transaction('admin_acoes_pendentes', 'readwrite');
+                txDelete.objectStore('admin_acoes_pendentes').delete(acao.id_local);
+                self.clients.matchAll().then(clients => { clients.forEach(client => client.postMessage({ type: 'SYNC_COMPLETO_ADMIN' })); });
+            }
+        } catch (err) { return; } // A internet caiu de novo no meio, ele tenta dps
+    }
+    
+    // Avisa o Admin que a sincronização terminou
+    self.registration.showNotification('Admin Ocean Coffee', { body: 'A internet voltou! Suas aprovações e rejeições foram sincronizadas.', icon: 'IMG/Loginho2.png', data: { url: '/Solicitações.html' } });
 }

@@ -459,15 +459,10 @@
         <div id="fullscreen-counter" class="fullscreen-counter"></div>
     </div>
 
-    <script type="module">
+<script type="module">
         // Importa a função de layout local
         import { initAdminPage } from './JS/admin-layout.js';
-    
-        // Informa ao script de layout qual é a página atual
-        initAdminPage({
-            name: "Solicitações",
-            icon: "fas fa-inbox"
-        });
+        initAdminPage({ name: "Solicitações", icon: "fas fa-inbox" });
         
         // --- Variáveis Globais ---
         let todasSolicitacoes = [];
@@ -488,6 +483,48 @@
         const searchInputEl = document.getElementById("searchInput");
         const headerTitleEl = document.getElementById('headerTitle');
     
+        // =============================================================
+        // GERENCIAR COFRE OFFLINE DO ADMIN (VERSÃO 4)
+        // =============================================================
+        function abrirBancoAdmin() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open('OceanCoffeeDB', 4);
+                request.onupgradeneeded = (event) => {
+                    const db = event.target.result;
+                    if (!db.objectStoreNames.contains('anuncios_pendentes')) db.createObjectStore('anuncios_pendentes', { keyPath: 'id', autoIncrement: true });
+                    if (!db.objectStoreNames.contains('edicoes_pendentes')) db.createObjectStore('edicoes_pendentes', { keyPath: 'id_local', autoIncrement: true });
+                    if (!db.objectStoreNames.contains('exclusoes_pendentes')) db.createObjectStore('exclusoes_pendentes', { keyPath: 'id_local', autoIncrement: true });
+                    if (!db.objectStoreNames.contains('admin_acoes_pendentes')) db.createObjectStore('admin_acoes_pendentes', { keyPath: 'id_local', autoIncrement: true });
+                };
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = reject;
+            });
+        }
+
+        // Lê quais anúncios o admin já aprovou/rejeitou offline para esconder da lista
+        async function lerAcoesAdminOffline() {
+            try {
+                const db = await abrirBancoAdmin();
+                const tx = db.transaction('admin_acoes_pendentes', 'readonly');
+                const req = tx.objectStore('admin_acoes_pendentes').getAll();
+                return new Promise(res => { req.onsuccess = () => res((req.result || []).map(acao => String(acao.anuncio_id))); });
+            } catch { return []; }
+        }
+
+        async function guardarAcaoAdminOffline(dados) {
+            const db = await abrirBancoAdmin();
+            const tx = db.transaction('admin_acoes_pendentes', 'readwrite');
+            tx.objectStore('admin_acoes_pendentes').add(dados);
+            return new Promise(res => { tx.oncomplete = res; });
+        }
+
+        // Se a internet voltar e o robô enviar, ele recarrega a tabela automaticamente!
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.addEventListener('message', (event) => {
+                if (event.data && event.data.type === 'SYNC_COMPLETO_ADMIN') { carregarSolicitacoes(); }
+            });
+        }
+
         // --- Funções Utilitárias ---
         function showToast(message, type = 'success') {
             const toast = document.createElement('div');
@@ -501,54 +538,45 @@
          }
     
         // --- Funções Principais ---
-        async function carregarSolicitacoes() {
+        window.carregarSolicitacoes = async function() {
             if (!tbodyEl) return;
             tbodyEl.innerHTML = `<tr><td colspan="5">Carregando solicitações...</td></tr>`;
             try {
-                // Busca os dados no servidor PHP
                 const response = await fetch('admin_listar_pendentes.php');
                 const data = await response.json();
     
                 if (!data.status) throw new Error(data.mensagem);
-    
-                todasSolicitacoes = data.solicitacoes || [];
+                
+                // MÁGICA: Esconde da tela os anúncios que o admin já decidiu offline
+                const acoesOffline = await lerAcoesAdminOffline();
+                todasSolicitacoes = (data.solicitacoes || []).filter(solicitacao => !acoesOffline.includes(String(solicitacao.id)));
+                
                 solicitacoesFiltradas = todasSolicitacoes;
                 currentPage = 1;
                 
-                 if (headerTitleEl) {
-                    headerTitleEl.textContent = `Solicitações (${todasSolicitacoes.length})`;
-                 }
+                 if (headerTitleEl) { headerTitleEl.textContent = `Solicitações (${todasSolicitacoes.length})`; }
                 displayPage();
             } catch (error) {
                 console.error("Erro ao carregar solicitações:", error.message);
-                showToast("Erro ao carregar solicitações", "error");
-                if (tbodyEl) tbodyEl.innerHTML = `<tr><td colspan="5">Erro ao carregar dados.</td></tr>`;
+                if (tbodyEl) tbodyEl.innerHTML = `<tr><td colspan="5" style="color:red;">Você está sem internet ou o servidor falhou. Aguardando rede...</td></tr>`;
             }
         }
     
-        function displayPage() {
-            renderizarTabela(solicitacoesFiltradas);
-            setupPagination(solicitacoesFiltradas);
-        }
+        function displayPage() { renderizarTabela(solicitacoesFiltradas); setupPagination(solicitacoesFiltradas); }
     
         function renderizarTabela(solicitacoes) {
-            if (!tbodyEl) return;
-            tbodyEl.innerHTML = "";
-    
+            if (!tbodyEl) return; tbodyEl.innerHTML = "";
             const startIndex = (currentPage - 1) * rowsPerPage;
             const paginatedItems = solicitacoes.slice(startIndex, startIndex + rowsPerPage);
     
             if (paginatedItems.length === 0) {
-                tbodyEl.innerHTML = `<tr><td colspan="5">Nenhuma solicitação pendente encontrada.</td></tr>`;
-                return;
+                tbodyEl.innerHTML = `<tr><td colspan="5">Nenhuma solicitação pendente encontrada.</td></tr>`; return;
             }
     
             paginatedItems.forEach((produto, index) => {
                 const tr = document.createElement("tr");
                 tr.setAttribute('data-id', produto.id);
                 const itemIndex = startIndex + index + 1;
-                
-                // Tratamento de data caso não exista na DB (usa data atual como fallback)
                 const dataString = produto.data_criacao || produto.data || new Date().toISOString();
                 const dataObjeto = new Date(dataString.includes('Z') ? dataString : dataString + "Z");
                 
@@ -560,90 +588,33 @@
                     <td><button class="btn-detalhes">Ver Detalhes</button></td> `;
                  
                  const detailsButton = tr.querySelector('.btn-detalhes');
-                 if (detailsButton) {
-                     detailsButton.addEventListener('click', () => abrirModalDetalhes(produto.id));
-                 }
+                 if (detailsButton) { detailsButton.addEventListener('click', () => abrirModalDetalhes(produto.id)); }
                 tbodyEl.appendChild(tr);
             });
         }
     
         function setupPagination(solicitacoes) {
-            if (!paginationContainerEl) return;
-            paginationContainerEl.innerHTML = "";
+            if (!paginationContainerEl) return; paginationContainerEl.innerHTML = "";
             const pageCount = Math.ceil(solicitacoes.length / rowsPerPage);
             if (pageCount <= 1) return;
     
-            const pageInfo = document.createElement('div');
-            pageInfo.className = 'pagination-info';
+            const pageInfo = document.createElement('div'); pageInfo.className = 'pagination-info';
             pageInfo.textContent = `Mostrando ${Math.min((currentPage - 1) * rowsPerPage + 1, solicitacoes.length)} a ${Math.min(currentPage * rowsPerPage, solicitacoes.length)} de ${solicitacoes.length} solicitações`;
     
-            const controls = document.createElement('div');
-            controls.className = 'pagination-controls';
+            const controls = document.createElement('div'); controls.className = 'pagination-controls';
     
             const createButton = (text, page, isDisabled = false, isActive = false) => {
-                const button = document.createElement('button');
-                button.innerHTML = text;
-                button.disabled = isDisabled;
+                const button = document.createElement('button'); button.innerHTML = text; button.disabled = isDisabled;
                 if (isActive) button.classList.add('active');
-                if (page) {
-                    button.addEventListener('click', () => {
-                        currentPage = page;
-                        displayPage();
-                    });
-                }
+                if (page) { button.addEventListener('click', () => { currentPage = page; displayPage(); }); }
                 return button;
             };
     
-            const createEllipsis = () => {
-                const span = document.createElement('span');
-                span.className = 'ellipsis';
-                span.textContent = '...';
-                return span;
-            };
-    
             controls.appendChild(createButton('&laquo; Anterior', currentPage - 1, currentPage === 1));
-    
-            const maxVisibleButtons = 5;
-            let startPage, endPage;
-    
-            if (pageCount <= maxVisibleButtons) {
-                startPage = 1;
-                endPage = pageCount;
-            } else {
-                const maxPagesShown = maxVisibleButtons - 2;
-                let maxPagesBeforeCurrent = Math.floor(maxPagesShown / 2);
-                let maxPagesAfterCurrent = Math.ceil(maxPagesShown / 2) - 1;
-    
-                if (currentPage <= maxPagesBeforeCurrent) {
-                    startPage = 1;
-                    endPage = maxPagesShown;
-                } else if (currentPage + maxPagesAfterCurrent >= pageCount) {
-                    startPage = pageCount - maxPagesShown + 1;
-                    endPage = pageCount;
-                } else {
-                    startPage = currentPage - maxPagesBeforeCurrent;
-                    endPage = currentPage + maxPagesAfterCurrent;
-                }
-            }
-    
-            if (startPage > 1) {
-                controls.appendChild(createButton('1', 1));
-                if (startPage > 2) controls.appendChild(createEllipsis());
-            }
-    
-            for (let i = startPage; i <= endPage; i++) {
-                controls.appendChild(createButton(i, i, false, i === currentPage));
-            }
-    
-            if (endPage < pageCount) {
-                if (endPage < pageCount - 1) controls.appendChild(createEllipsis());
-                controls.appendChild(createButton(pageCount, pageCount));
-            }
-    
+            for (let i = 1; i <= pageCount; i++) { controls.appendChild(createButton(i, i, false, i === currentPage)); }
             controls.appendChild(createButton('Próximo &raquo;', currentPage + 1, currentPage === pageCount));
     
-            paginationContainerEl.appendChild(pageInfo);
-            paginationContainerEl.appendChild(controls);
+            paginationContainerEl.appendChild(pageInfo); paginationContainerEl.appendChild(controls);
         }
     
         // --- Funções do Modal ---
@@ -653,7 +624,6 @@
             if (!produto) return;
             
             document.getElementById('modal-descricao').textContent = produto.descricao || 'Não informado.';
-            
             const dataString = produto.data_criacao || produto.data || new Date().toISOString();
             const dataObjeto = new Date(dataString.includes('Z') ? dataString : dataString + "Z");
             document.getElementById('modal-data').textContent = dataObjeto.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
@@ -663,8 +633,6 @@
             document.getElementById('modal-preco').textContent = parseFloat(produto.preco).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     
             const carrosselContainer = document.getElementById('modal-carrossel');
-            
-            // Agrupa as imagens vindas do MySQL
             imagensCarrosselAtual = [];
             if(produto.imagem_0 && produto.imagem_0.trim() !== '') imagensCarrosselAtual.push(produto.imagem_0);
             if(produto.imagem_1 && produto.imagem_1.trim() !== '') imagensCarrosselAtual.push(produto.imagem_1);
@@ -687,73 +655,45 @@
         
         window.fecharModalDetalhes = () => { if (detalhesModalEl) detalhesModalEl.classList.remove('visible'); }; 
         window.fecharModalRejeicao = () => { if (rejectionModalEl) rejectionModalEl.classList.remove('visible'); };
+        window.fecharModalFullscreen = () => { event && event.stopPropagation(); if (fullscreenModalEl) fullscreenModalEl.classList.remove("visible"); };
+        window.mudarImagemModal=(e,t)=>{ e.stopPropagation(); carrosselAtualIndex=(carrosselAtualIndex+t+imagensCarrosselAtual.length)%imagensCarrosselAtual.length; const imgElement = document.getElementById("carrossel-img-modal"); imgElement.src=imagensCarrosselAtual[carrosselAtualIndex]; imgElement.setAttribute("onclick",`abrirModalFullscreen(${carrosselAtualIndex})`); };
+        window.abrirModalFullscreen = (index) => { event && event.stopPropagation(); if(!imagensCarrosselAtual || imagensCarrosselAtual.length === 0 || !fullscreenModalEl) return; fullscreenIndex = index; atualizarImagemFullscreen(); fullscreenModalEl.classList.add("visible"); };
+        window.mudarImagemFullscreen = (direction) => { event && event.stopPropagation(); fullscreenIndex = (fullscreenIndex + direction + imagensCarrosselAtual.length) % imagensCarrosselAtual.length; atualizarImagemFullscreen(); };
+        function atualizarImagemFullscreen(){ if(!imagensCarrosselAtual || imagensCarrosselAtual.length === 0 || !fullscreenModalEl) return; document.getElementById("fullscreen-image").src=imagensCarrosselAtual[fullscreenIndex]; document.getElementById("fullscreen-counter").textContent=`${fullscreenIndex+1} / ${imagensCarrosselAtual.length}`; }
     
-        window.mudarImagemModal=(e,t)=>{
-            e.stopPropagation();
-            carrosselAtualIndex=(carrosselAtualIndex+t+imagensCarrosselAtual.length)%imagensCarrosselAtual.length;
-            const imgElement = document.getElementById("carrossel-img-modal");
-            imgElement.src=imagensCarrosselAtual[carrosselAtualIndex];
-            imgElement.setAttribute("onclick",`abrirModalFullscreen(${carrosselAtualIndex})`);
-         };
-         
-        window.abrirModalFullscreen = (index) => {
-            event && event.stopPropagation();
-            if(!imagensCarrosselAtual || imagensCarrosselAtual.length === 0 || !fullscreenModalEl) return;
-            fullscreenIndex = index;
-            atualizarImagemFullscreen();
-            fullscreenModalEl.classList.add("visible");
-         };
-         
-        window.fecharModalFullscreen = () => {
-            event && event.stopPropagation();
-            if (fullscreenModalEl) fullscreenModalEl.classList.remove("visible");
-         };
-         
-        window.mudarImagemFullscreen = (direction) => {
-             event && event.stopPropagation();
-            fullscreenIndex = (fullscreenIndex + direction + imagensCarrosselAtual.length) % imagensCarrosselAtual.length;
-            atualizarImagemFullscreen();
-         };
-         
-        function atualizarImagemFullscreen(){
-            if(!imagensCarrosselAtual || imagensCarrosselAtual.length === 0 || !fullscreenModalEl) return;
-            document.getElementById("fullscreen-image").src=imagensCarrosselAtual[fullscreenIndex];
-            document.getElementById("fullscreen-counter").textContent=`${fullscreenIndex+1} / ${imagensCarrosselAtual.length}`;
-        }
-    
-        // --- Funções de Ação ---
-         async function aprovarAnuncio(id) {
+        // ======================================================================
+        // AÇÕES OFFLINE: APROVAR E REJEITAR
+        // ======================================================================
+        async function aprovarAnuncio(id) {
              try {
-                 // Envia o pedido para o nosso ficheiro PHP de atualizar status
-                 const response = await fetch('atualizar_status.php', {
-                     method: 'POST',
-                     headers: { 'Content-Type': 'application/json' },
-                     body: JSON.stringify({ id: id, status: 'aprovado' })
-                 });
-                 
+                 const response = await fetch('atualizar_status.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: id, status: 'aprovado' }) });
                  const data = await response.json();
-                 
                  if (!data.status) throw new Error(data.mensagem);
     
                  showToast(`Anúncio aprovado com sucesso!`, 'success');
-                 fecharModalDetalhes();
-                 await carregarSolicitacoes(); 
-            } catch (error) {
-                showToast(`Erro ao aprovar: ${error.message}`, 'error');
-                console.error('Erro no processo de aprovação:', error);
+                 fecharModalDetalhes(); await carregarSolicitacoes(); 
+            } catch (networkError) {
+                // INTERNET CAIU? SALVA OFFLINE
+                if (!navigator.onLine || networkError.message.includes('Failed to fetch') || networkError.message.includes('NetworkError')) {
+                    await guardarAcaoAdminOffline({ tipo: 'aprovar', anuncio_id: id, dataRegistro: new Date().toISOString() });
+                    if ('serviceWorker' in navigator && 'SyncManager' in window) {
+                        const sw = await navigator.serviceWorker.ready;
+                        await sw.sync.register('admin-acoes-offline');
+                        showToast("Aprovação salva offline. Será enviada quando a internet voltar.", "info");
+                        
+                        fecharModalDetalhes();
+                        todasSolicitacoes = todasSolicitacoes.filter(ad => ad.id != id);
+                        displayPage(); // Some da tela instantaneamente
+                    }
+                } else { showToast(`Erro ao aprovar: ${networkError.message}`, 'error'); }
             }
           };
           
          function rejeitarAnuncio(id) {
             fecharModalDetalhes();
-            if (rejectionModalEl && rejectionFormEl) {
-                rejectionModalEl.classList.add('visible');
-                rejectionFormEl.dataset.anuncioId = id; 
-                rejectionFormEl.reset(); 
-            }
+            if (rejectionModalEl && rejectionFormEl) { rejectionModalEl.classList.add('visible'); rejectionFormEl.dataset.anuncioId = id; rejectionFormEl.reset(); }
           };
     
-         // --- Event Listener Rejection Form ---
          if (rejectionFormEl) {
             rejectionFormEl.addEventListener('submit', async (e) => {
                 e.preventDefault();
@@ -761,107 +701,67 @@
                 if (!anuncioId) return;
     
                 const btn = e.target.querySelector('button[type="submit"]');
-                btn.disabled = true;
-                btn.textContent = 'Enviando...';
+                btn.disabled = true; btn.textContent = 'Enviando...';
     
                 const selectedReasons = [...e.target.querySelectorAll('input[name="reason"]:checked')].map(cb => cb.value);
                 const customMessage = e.target.querySelector('#rejection-custom-message').value.trim();
     
-                if (selectedReasons.length === 0 && !customMessage) {
-                    showToast('Selecione ao menos um motivo ou escreva uma mensagem.', 'error');
-                    btn.disabled = false;
-                    btn.textContent = 'Confirmar Rejeição';
-                    return;
-                }
+                if (selectedReasons.length === 0 && !customMessage) { showToast('Selecione ao menos um motivo.', 'error'); btn.disabled = false; btn.textContent = 'Confirmar Rejeição'; return; }
     
                 let finalMessage = "Seu anúncio foi rejeitado pelos seguintes motivos:\n";
                 selectedReasons.forEach(reason => { finalMessage += `- ${reason}\n`; });
                 if (customMessage) { finalMessage += `\nMensagem do administrador: ${customMessage}`; }
     
                 try {
-                    // Envia para o ficheiro PHP específico de rejeição
-                    const response = await fetch('admin_rejeitar_anuncio.php', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ id: anuncioId, motivo: finalMessage })
-                    });
-                    
+                    const response = await fetch('admin_rejeitar_anuncio.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: anuncioId, motivo: finalMessage }) });
                     const data = await response.json();
                     if (!data.status) throw new Error(data.mensagem);
     
                     showToast('Anúncio rejeitado com sucesso!', 'success');
-                    fecharModalRejeicao();
-                    await carregarSolicitacoes(); 
-                } catch (error) {
-                    showToast(`Erro ao rejeitar: ${error.message}`, 'error');
-                } finally {
-                    btn.disabled = false;
-                    btn.textContent = 'Confirmar Rejeição';
-                }
+                    fecharModalRejeicao(); await carregarSolicitacoes(); 
+                } catch (networkError) {
+                    // INTERNET CAIU NA REJEIÇÃO? SALVA OFFLINE
+                    if (!navigator.onLine || networkError.message.includes('Failed to fetch') || networkError.message.includes('NetworkError')) {
+                        await guardarAcaoAdminOffline({ tipo: 'rejeitar', anuncio_id: anuncioId, motivo: finalMessage, dataRegistro: new Date().toISOString() });
+                        if ('serviceWorker' in navigator && 'SyncManager' in window) {
+                            const sw = await navigator.serviceWorker.ready;
+                            await sw.sync.register('admin-acoes-offline');
+                            showToast("Rejeição salva offline. Será enviada quando a internet voltar.", "info");
+                            
+                            fecharModalRejeicao();
+                            todasSolicitacoes = todasSolicitacoes.filter(ad => ad.id != anuncioId);
+                            displayPage(); // Some da tela
+                        }
+                    } else { showToast(`Erro ao rejeitar: ${networkError.message}`, 'error'); }
+                } finally { btn.disabled = false; btn.textContent = 'Confirmar Rejeição'; }
             });
          }
     
         // --- DOMContentLoaded ---
         document.addEventListener("DOMContentLoaded",()=>{
             carregarSolicitacoes(); 
-    
             if (searchInputEl) {
                 searchInputEl.addEventListener("input", e => {
                     const termo = e.target.value.toLowerCase();
-                    solicitacoesFiltradas = todasSolicitacoes.filter(p =>
-                        (p.titulo || "").toLowerCase().includes(termo) ||
-                        (p.nome_usuario || "").toLowerCase().includes(termo)
-                    );
-                    currentPage = 1;
-                    displayPage();
+                    solicitacoesFiltradas = todasSolicitacoes.filter(p => (p.titulo || "").toLowerCase().includes(termo) || (p.nome_usuario || "").toLowerCase().includes(termo) );
+                    currentPage = 1; displayPage();
                 });
             }
-            
             const backBtn = document.getElementById("solicitacoes-back-btn");
-            if(backBtn) {
-                backBtn.addEventListener("click", (e) => {
-                    e.preventDefault();
-                    history.back(); 
-                });
-            }
-    
-            window.addEventListener("keydown",e=>{
-                if(fullscreenModalEl && fullscreenModalEl.classList.contains("visible")){
-                    if(e.key === "Escape") fecharModalFullscreen();
-                    if(e.key === "ArrowRight") mudarImagemFullscreen(1);
-                    if(e.key === "ArrowLeft") mudarImagemFullscreen(-1);
-                } else if (detalhesModalEl && detalhesModalEl.classList.contains("visible")){
-                    if(e.key === "Escape") fecharModalDetalhes();
-                } else if (rejectionModalEl && rejectionModalEl.classList.contains("visible")) {
-                    if (e.key === "Escape") fecharModalRejeicao();
-                }
-            });
-    
-            if (detalhesModalEl) {
-                detalhesModalEl.addEventListener('click', (e) => {
-                     if (e.target === detalhesModalEl) fecharModalDetalhes();
-                });
-            }
-            if (rejectionModalEl) {
-                rejectionModalEl.addEventListener('click', (e) => {
-                    if (e.target === rejectionModalEl) fecharModalRejeicao();
-                });
-            }
-            if (fullscreenModalEl) {
-                fullscreenModalEl.addEventListener('click', (e) => {
-                     if (e.target === fullscreenModalEl) fecharModalFullscreen();
-                });
-            }
+            if(backBtn) { backBtn.addEventListener("click", (e) => { e.preventDefault(); history.back(); }); }
             
-            // Logout
+            // Listeners Padrão de Teclado/Modal
+            window.addEventListener("keydown",e=>{
+                if(fullscreenModalEl && fullscreenModalEl.classList.contains("visible")){ if(e.key === "Escape") fecharModalFullscreen(); if(e.key === "ArrowRight") mudarImagemFullscreen(1); if(e.key === "ArrowLeft") mudarImagemFullscreen(-1);
+                } else if (detalhesModalEl && detalhesModalEl.classList.contains("visible")){ if(e.key === "Escape") fecharModalDetalhes();
+                } else if (rejectionModalEl && rejectionModalEl.classList.contains("visible")) { if (e.key === "Escape") fecharModalRejeicao(); }
+            });
+            if (detalhesModalEl) detalhesModalEl.addEventListener('click', (e) => { if (e.target === detalhesModalEl) fecharModalDetalhes(); });
+            if (rejectionModalEl) rejectionModalEl.addEventListener('click', (e) => { if (e.target === rejectionModalEl) fecharModalRejeicao(); });
+            if (fullscreenModalEl) fullscreenModalEl.addEventListener('click', (e) => { if (e.target === fullscreenModalEl) fecharModalFullscreen(); });
+            
             const logoutBtns = document.querySelectorAll('.menu-item-logout');
-            logoutBtns.forEach(btn => btn.addEventListener('click', (e) => {
-                e.preventDefault();
-                if(confirm("Tem certeza que deseja sair?")) {
-                    localStorage.removeItem("usuarioLogado");
-                    window.location.replace("index.html");
-                }
-            }));
+            logoutBtns.forEach(btn => btn.addEventListener('click', (e) => { e.preventDefault(); if(confirm("Tem certeza que deseja sair?")) { localStorage.removeItem("usuarioLogado"); window.location.replace("index.html"); } }));
         });
     </script>
 </body>
