@@ -365,5 +365,65 @@
             });
         });
     </script>
+
+    <script>
+  // Função para salvar os dados preenchidos no IndexedDB (Cofre Offline)
+  function guardarAnuncioOffline(dados) {
+      return new Promise((resolve, reject) => {
+          const request = indexedDB.open('OceanCoffeeDB', 1);
+          request.onupgradeneeded = (event) => {
+              const db = event.target.result;
+              db.createObjectStore('anuncios_pendentes', { keyPath: 'id', autoIncrement: true });
+          };
+          request.onsuccess = (event) => {
+              const db = event.target.result;
+              const tx = db.transaction('anuncios_pendentes', 'readwrite');
+              const store = tx.objectStore('anuncios_pendentes');
+              store.add(dados); // Salva os dados
+              tx.oncomplete = resolve;
+          };
+      });
+  }
+
+  // Pegue o ID do seu formulário (Mude 'meu-formulario' para o ID real que você usa)
+  const formulario = document.getElementById('meu-formulario');
+
+  if(formulario) {
+      formulario.addEventListener('submit', async (e) => {
+          e.preventDefault(); // Impede a página de recarregar
+
+          // 1. Coletar as informações que a pessoa digitou
+          const dadosDoAnuncio = {
+              titulo: document.getElementById('titulo').value, // Troque pelos IDs reais dos seus inputs
+              descricao: document.getElementById('descricao').value,
+              dataGuardada: new Date().toISOString()
+          };
+
+          // 2. VERIFICA SE TEM INTERNET
+          if (navigator.onLine) {
+              console.log("Com internet! Pode enviar direto.");
+              // Aqui você coloca o seu código normal que envia o formulário...
+              alert("Anúncio enviado normalmente!");
+
+          } else {
+              // 3. SEM INTERNET: GUARDA NO COFRE OFFLINE
+              console.log("Sem internet. Guardando offline...");
+              await guardarAnuncioOffline(dadosDoAnuncio);
+              
+              // 4. AVISA O SERVICE WORKER PARA ACORDAR QUANDO A INTERNET VOLTAR
+              if ('serviceWorker' in navigator && 'SyncManager' in window) {
+                  const sw = await navigator.serviceWorker.ready;
+                  // Registra a "tarefa" para o momento que a rede voltar
+                  await sw.sync.register('enviar-anuncios-offline');
+                  
+                  // Mensagem tranquilizando o usuário
+                  alert("Você está sem internet! 📡\nFique tranquilo, seu anúncio foi guardado. Você pode até fechar o site, ele será enviado automaticamente quando o celular conectar novamente!");
+              } else {
+                  alert("Você está sem internet no momento. Tente novamente mais tarde.");
+              }
+          }
+      });
+  }
+</script>
 </body>
 </html>

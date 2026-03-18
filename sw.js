@@ -87,3 +87,70 @@ self.addEventListener('notificationclick', function(event) {
         clients.openWindow(event.notification.data.url)
     );
 });
+
+// ========================================================================
+// MÁGICA DE SINCRONIZAÇÃO EM SEGUNDO PLANO (BACKGROUND SYNC)
+// ========================================================================
+
+// 1. Função para abrir o cofre offline (IndexedDB)
+function abrirCofreOffline() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open('OceanCoffeeDB', 1);
+        request.onupgradeneeded = (event) => {
+            const db = event.target.result;
+            // Cria a tabela onde os anúncios offline vão ficar esperando
+            db.createObjectStore('anuncios_pendentes', { keyPath: 'id', autoIncrement: true });
+        };
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject('Erro ao abrir o cofre offline');
+    });
+}
+
+// 2. Escutar o evento 'sync' (Disparado pelo navegador assim que a internet volta)
+self.addEventListener('sync', (event) => {
+    if (event.tag === 'enviar-anuncios-offline') {
+        console.log('[Service Worker] Internet voltou! Sincronizando anúncios...');
+        event.waitUntil(processarAnunciosOffline());
+    }
+});
+
+// 3. Função que pega do cofre e envia
+async function processarAnunciosOffline() {
+    const db = await abrirCofreOffline();
+    const tx = db.transaction('anuncios_pendentes', 'readonly');
+    const store = tx.objectStore('anuncios_pendentes');
+    
+    // Pega todos os anúncios guardados
+    const anunciosGuardados = await new Promise(res => {
+        const req = store.getAll();
+        req.onsuccess = () => res(req.result);
+    });
+
+    if (anunciosGuardados.length === 0) return;
+
+    for (const anuncio of anunciosGuardados) {
+        try {
+            // ======================================================
+            // AQUI VOCÊ FARIA O ENVIO REAL PARA O SEU BACKEND/API
+            // ======================================================
+            console.log('Enviando anúncio salvo:', anuncio);
+            
+            // Exemplo de como seria o envio:
+            // await fetch('/api/salvar_anuncio', { method: 'POST', body: JSON.stringify(anuncio) });
+            
+            // Se o envio deu certo, apagamos do cofre offline para não enviar duplicado
+            const txDelete = db.transaction('anuncios_pendentes', 'readwrite');
+            txDelete.objectStore('anuncios_pendentes').delete(anuncio.id);
+
+        } catch (err) {
+            console.log('Falha ao enviar anúncio offline. O sistema tentará novamente depois.');
+        }
+    }
+
+    // 4. Manda um Push para o usuário avisando que o anúncio foi publicado!
+    self.registration.showNotification('Ocean Coffee', {
+        body: 'A internet voltou e seu anúncio foi publicado com sucesso! ☕',
+        icon: 'IMG/Loginho2.png',
+        vibrate: [200, 100, 200]
+    });
+}
