@@ -200,7 +200,7 @@
     </nav>
 
 <script>
-        // --- SEÇÃO BÁSICA DE SEGURANÇA ---
+        // --- SEÇÃO BÁSICA DE SEGURANÇA E UI ---
         function protegerPagina() {
             const usuario = localStorage.getItem("usuarioLogado");
             if (!usuario) { window.location.replace('Login.html'); return null; }
@@ -224,8 +224,7 @@
         function showConfirmationPopup(title, message, options = {}) {
             const { confirmText = 'Sim', cancelText = 'Cancelar' } = options;
             return new Promise((resolve) => {
-                const o = document.createElement('div');
-                o.className = 'confirmation-overlay';
+                const o = document.createElement('div'); o.className = 'confirmation-overlay';
                 o.innerHTML = `<div class="confirmation-modal"><h3>${title}</h3><p>${message}</p><div class="confirmation-actions"><button class="confirmation-btn-cancel">${cancelText}</button><button class="confirmation-btn-confirm">${confirmText}</button></div></div>`;
                 const close = (result) => { o.classList.remove('show'); o.addEventListener('transitionend', () => { o.remove(); resolve(result); }); };
                 o.querySelector('.confirmation-btn-cancel').addEventListener('click', () => close(false));
@@ -236,31 +235,53 @@
         }
 
         // =============================================================
-        // LER ANÚNCIOS DO COFRE OFFLINE
+        // GERENCIAR COFRE OFFLINE (VERSÃO 3)
         // =============================================================
-        function lerAnunciosOffline() {
-            return new Promise((resolve) => {
-                const request = indexedDB.open('OceanCoffeeDB', 2);
-                request.onsuccess = (event) => {
+        function abrirBanco() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open('OceanCoffeeDB', 3);
+                request.onupgradeneeded = (event) => {
                     const db = event.target.result;
-                    if (!db.objectStoreNames.contains('anuncios_pendentes')) { resolve([]); return; }
-                    const tx = db.transaction('anuncios_pendentes', 'readonly');
-                    const store = tx.objectStore('anuncios_pendentes');
-                    const req = store.getAll();
-                    req.onsuccess = () => {
-                        const ads = req.result || [];
-                        resolve(ads.filter(ad => ad.usuario_id == user.id));
-                    };
+                    if (!db.objectStoreNames.contains('anuncios_pendentes')) db.createObjectStore('anuncios_pendentes', { keyPath: 'id', autoIncrement: true });
+                    if (!db.objectStoreNames.contains('edicoes_pendentes')) db.createObjectStore('edicoes_pendentes', { keyPath: 'id_local', autoIncrement: true });
+                    if (!db.objectStoreNames.contains('exclusoes_pendentes')) db.createObjectStore('exclusoes_pendentes', { keyPath: 'id_local', autoIncrement: true });
                 };
-                request.onerror = () => resolve([]); 
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = reject;
             });
         }
 
+        async function lerAnunciosOffline() {
+            try {
+                const db = await abrirBanco();
+                const tx = db.transaction('anuncios_pendentes', 'readonly');
+                const req = tx.objectStore('anuncios_pendentes').getAll();
+                return new Promise(res => { req.onsuccess = () => res((req.result || []).filter(ad => ad.usuario_id == user.id)); });
+            } catch { return []; }
+        }
+
+        // LER QUAIS ANÚNCIOS ESTÃO NA "LIXEIRA" OFFLINE PARA ESCONDÊ-LOS DA TELA
+        async function lerExclusoesOffline() {
+            try {
+                const db = await abrirBanco();
+                const tx = db.transaction('exclusoes_pendentes', 'readonly');
+                const req = tx.objectStore('exclusoes_pendentes').getAll();
+                return new Promise(res => { req.onsuccess = () => res((req.result || []).map(ad => String(ad.anuncio_id))); });
+            } catch { return []; }
+        }
+
+        // GUARDAR ORDEM DE EXCLUIR QUANDO SEM INTERNET
+        async function guardarExclusaoOffline(adId) {
+            const db = await abrirBanco();
+            const tx = db.transaction('exclusoes_pendentes', 'readwrite');
+            tx.objectStore('exclusoes_pendentes').add({ anuncio_id: adId, data_exclusao: new Date().toISOString() });
+            return new Promise(res => { tx.oncomplete = res; });
+        }
+
+        // AVISO DO ROBÔ QUANDO A INTERNET VOLTA
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.addEventListener('message', (event) => {
-                if (event.data && event.data.type === 'SYNC_COMPLETO') {
-                    loadAds(); // Recarrega a lista se a internet voltou
-                }
+                if (event.data && event.data.type === 'SYNC_COMPLETO') { loadAds(); }
             });
         }
 
@@ -285,11 +306,15 @@
                 adList.innerHTML = '<p style="text-align: center; padding: 2rem;">Carregando...</p>';
                 try {
                     let onlineAds = [];
+                    const anunciosExcluidosOffline = await lerExclusoesOffline();
+
                     try {
                         const response = await fetch(`listar_meus_anuncios.php?usuario_id=${user.id}`);
                         const data = await response.json();
                         if (data.status === true) {
-                            onlineAds = data.produtos.map(ad => ({
+                            onlineAds = data.produtos
+                                .filter(ad => !anunciosExcluidosOffline.includes(String(ad.id))) // MÁGICA: Esconde da tela os que já foram excluídos offline!
+                                .map(ad => ({
                                 ...ad,
                                 status: ad.status_aprovacao === 'aprovado' ? 'aprovados' : (ad.status_aprovacao === 'rejeitado' ? 'rejeitados' : 'pendentes')
                             }));
@@ -298,7 +323,7 @@
 
                     const offlineAdsDB = await lerAnunciosOffline();
                     const formattedOfflineAds = offlineAdsDB.map(ad => ({
-                        id: 'offline-' + ad.id, // ID especial para diferenciar
+                        id: 'offline-' + ad.id,
                         titulo: ad.titulo,
                         preco: ad.preco,
                         status: 'pendentes',
@@ -343,13 +368,10 @@
                         if(ad.isOffline) statusText = '<i class="fas fa-wifi" style="margin-right:5px; opacity:0.7;"></i> Aguardando Rede';
                         
                         let reasonIconHtml = '';
-                        if (ad.status === 'rejeitados' && ad.motivo_rejeicao) {
-                            reasonIconHtml = `<div class="status-container"><i class="fas fa-envelope rejection-reason-icon"></i></div>`;
-                        }
+                        if (ad.status === 'rejeitados' && ad.motivo_rejeicao) reasonIconHtml = `<div class="status-container"><i class="fas fa-envelope rejection-reason-icon"></i></div>`;
 
                         const imagemSrc = ad.imagem_0 ? ad.imagem_0 : 'IMG/placeholder.png';
 
-                        // OS BOTÕES VOLTARAM! Inclusive a lixeira para cancelar os offline
                         const botoesAcao = ad.isOffline ? `
                             <div class="ad-actions">
                                 <button class="action-btn delete" title="Cancelar envio offline"><i class="fas fa-trash-alt"></i></button>
@@ -408,10 +430,9 @@
             });
 
             // ==========================================================
-            // O EVENTO DE EXCLUIR E LER MOTIVOS DE REJEIÇÃO (CORRIGIDO)
+            // EXCLUSÃO BLINDADA (ONLINE E OFFLINE)
             // ==========================================================
             adList.addEventListener('click', async (e) => {
-                // Motivo Rejeição
                 if (e.target.classList.contains('rejection-reason-icon')) {
                     const adCard = e.target.closest('.ad-card');
                     const reasonBox = adCard.querySelector('.rejection-reason-box');
@@ -419,7 +440,6 @@
                     return;
                 }
 
-                // EXCLUIR ANÚNCIO
                 const deleteButton = e.target.closest('.delete');
                 if (deleteButton) {
                     const adCard = deleteButton.closest('.ad-card');
@@ -432,23 +452,20 @@
                     const confirmed = await showConfirmationPopup('Excluir Anúncio', msg, { confirmText: 'Sim, Excluir' });
 
                     if (confirmed) {
-                        // 1. Se for anúncio que está no cofre Offline (ainda não subiu)
+                        // 1. CANCELAR ANÚNCIO NOVO QUE AINDA NEM SUBIU (OFFLINE)
                         if (String(adId).startsWith('offline-')) {
                             const idLocal = parseInt(adId.replace('offline-', ''));
-                            const request = indexedDB.open('OceanCoffeeDB', 2);
-                            request.onsuccess = (event) => {
-                                const db = event.target.result;
-                                const tx = db.transaction('anuncios_pendentes', 'readwrite');
-                                tx.objectStore('anuncios_pendentes').delete(idLocal);
-                                tx.oncomplete = () => {
-                                    showPopup('Anúncio cancelado!', 'success');
-                                    loadAds(); // Recarrega
-                                };
+                            const db = await abrirBanco();
+                            const tx = db.transaction('anuncios_pendentes', 'readwrite');
+                            tx.objectStore('anuncios_pendentes').delete(idLocal);
+                            tx.oncomplete = () => {
+                                showPopup('Anúncio cancelado!', 'success');
+                                loadAds();
                             };
                             return;
                         }
 
-                        // 2. Se for anúncio do banco de dados (MySQL)
+                        // 2. EXCLUIR ANÚNCIO REAL (ONLINE OU SEM INTERNET)
                         try {
                             const response = await fetch('excluir_anuncio.php', {
                                 method: 'POST',
@@ -461,30 +478,39 @@
                                 showPopup('Anúncio excluído com sucesso!', 'success');
                                 allUserAds = allUserAds.filter(ad => ad.id != adId);
                                 displayPage();
+                            } else { throw new Error(data.mensagem); }
+                            
+                        } catch (networkError) {
+                            // INTERNET CAIU? GUARDA NA GAVETA DE EXCLUSÃO
+                            if (!navigator.onLine || networkError.message.includes('Failed to fetch') || networkError.message.includes('NetworkError')) {
+                                await guardarExclusaoOffline(adId);
+                                
+                                if ('serviceWorker' in navigator && 'SyncManager' in window) {
+                                    const sw = await navigator.serviceWorker.ready;
+                                    await sw.sync.register('excluir-anuncios-offline');
+                                    
+                                    showPopup("Sem internet! A exclusão foi agendada e será feita quando a conexão voltar.", "info", 5000);
+                                    
+                                    // Removemos o anúncio da tela instantaneamente
+                                    allUserAds = allUserAds.filter(ad => ad.id != adId);
+                                    displayPage();
+                                }
                             } else {
-                                throw new Error(data.mensagem);
+                                showPopup(`Erro ao excluir: ${networkError.message}`, 'error');
                             }
-                        } catch (error) {
-                            showPopup(`Erro ao excluir o anúncio.`, 'error');
                         }
                     }
                 }
             });
 
-            // Iniciar tudo
             await loadAds();
             
-            // Lógica Menu Mobile e Logout
-            async function handleLogout(e) { e.preventDefault(); const confirmed = await showConfirmationPopup('Confirmar Saída', 'Você tem certeza que deseja sair?', { confirmText: 'Sair' }); if (confirmed) { localStorage.removeItem("usuarioLogado"); window.location.replace("index.html"); } }
-            document.getElementById('logout-btn')?.addEventListener('click', handleLogout);
-            document.getElementById('mobile-logout-btn')?.addEventListener('click', handleLogout);
-            
-            const menuToggle = document.getElementById('menu-toggle');
-            const mobileNav = document.getElementById('mobile-nav');
-            const navOverlay = document.getElementById('nav-overlay');
+            // Logout e Menu Mobile
+            async function handleLogout(e) { e.preventDefault(); const confirmed = await showConfirmationPopup('Confirmar Saída', 'Deseja sair da conta?', { confirmText: 'Sair' }); if (confirmed) { localStorage.removeItem("usuarioLogado"); window.location.replace("index.html"); } }
+            document.getElementById('logout-btn')?.addEventListener('click', handleLogout); document.getElementById('mobile-logout-btn')?.addEventListener('click', handleLogout);
+            const menuToggle = document.getElementById('menu-toggle'); const mobileNav = document.getElementById('mobile-nav'); const navOverlay = document.getElementById('nav-overlay');
             function closeMenu() { mobileNav?.classList.remove('is-open'); navOverlay?.classList.remove('is-open'); }
-            menuToggle?.addEventListener('click', () => { mobileNav.classList.add('is-open'); navOverlay.classList.add('is-open'); });
-            navOverlay?.addEventListener('click', closeMenu);
+            menuToggle?.addEventListener('click', () => { mobileNav.classList.add('is-open'); navOverlay.classList.add('is-open'); }); navOverlay?.addEventListener('click', closeMenu);
         });
     </script>
 </body>

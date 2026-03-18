@@ -67,22 +67,19 @@ self.addEventListener('notificationclick', function(event) {
 });
 
 // ========================================================================
-// MÁGICA DE SINCRONIZAÇÃO EM SEGUNDO PLANO (CRIAR E EDITAR)
+// MÁGICA DE SINCRONIZAÇÃO EM SEGUNDO PLANO (CRIAR, EDITAR E EXCLUIR)
 // ========================================================================
 
 function abrirCofreOffline() {
     return new Promise((resolve, reject) => {
-        // VERSÃO 2: Para criar a nova tabela de edições
-        const request = indexedDB.open('OceanCoffeeDB', 2); 
+        // VERSÃO 3: Agora com suporte a exclusões!
+        const request = indexedDB.open('OceanCoffeeDB', 3); 
         
         request.onupgradeneeded = (event) => {
             const db = event.target.result;
-            if (!db.objectStoreNames.contains('anuncios_pendentes')) {
-                db.createObjectStore('anuncios_pendentes', { keyPath: 'id', autoIncrement: true });
-            }
-            if (!db.objectStoreNames.contains('edicoes_pendentes')) {
-                db.createObjectStore('edicoes_pendentes', { keyPath: 'id_local', autoIncrement: true });
-            }
+            if (!db.objectStoreNames.contains('anuncios_pendentes')) db.createObjectStore('anuncios_pendentes', { keyPath: 'id', autoIncrement: true });
+            if (!db.objectStoreNames.contains('edicoes_pendentes')) db.createObjectStore('edicoes_pendentes', { keyPath: 'id_local', autoIncrement: true });
+            if (!db.objectStoreNames.contains('exclusoes_pendentes')) db.createObjectStore('exclusoes_pendentes', { keyPath: 'id_local', autoIncrement: true });
         };
         request.onsuccess = () => resolve(request.result);
         request.onerror = () => reject('Erro ao abrir o cofre offline');
@@ -91,103 +88,89 @@ function abrirCofreOffline() {
 
 self.addEventListener('sync', (event) => {
     if (event.tag === 'enviar-anuncios-offline') {
-        console.log('[Service Worker] Sincronizando novos anúncios...');
         event.waitUntil(processarAnunciosOffline());
     }
     if (event.tag === 'editar-anuncios-offline') {
-        console.log('[Service Worker] Sincronizando edições de anúncios...');
         event.waitUntil(processarEdicoesOffline());
+    }
+    if (event.tag === 'excluir-anuncios-offline') {
+        console.log('[Service Worker] Sincronizando exclusões...');
+        event.waitUntil(processarExclusoesOffline());
     }
 });
 
-// 1. Processar Criação (Já existia)
+// 1. Processar Criação 
 async function processarAnunciosOffline() {
     const db = await abrirCofreOffline();
     const tx = db.transaction('anuncios_pendentes', 'readonly');
     const store = tx.objectStore('anuncios_pendentes');
-    
-    const anunciosGuardados = await new Promise(res => {
-        const req = store.getAll();
-        req.onsuccess = () => res(req.result);
-    });
-
+    const anunciosGuardados = await new Promise(res => { const req = store.getAll(); req.onsuccess = () => res(req.result); });
     if (anunciosGuardados.length === 0) return;
 
     for (const anuncio of anunciosGuardados) {
         try {
             const formData = new FormData();
-            formData.append('usuario_id', anuncio.usuario_id);
-            formData.append('titulo', anuncio.titulo);
-            formData.append('descricao', anuncio.descricao);
-            formData.append('preco', anuncio.preco);
-            formData.append('local', anuncio.local);
-            formData.append('contato', anuncio.contato);
-            if (anuncio.imagem_0) formData.append('imagem_0', anuncio.imagem_0);
-            if (anuncio.imagem_1) formData.append('imagem_1', anuncio.imagem_1);
-            if (anuncio.imagem_2) formData.append('imagem_2', anuncio.imagem_2);
+            formData.append('usuario_id', anuncio.usuario_id); formData.append('titulo', anuncio.titulo); formData.append('descricao', anuncio.descricao); formData.append('preco', anuncio.preco); formData.append('local', anuncio.local); formData.append('contato', anuncio.contato);
+            if (anuncio.imagem_0) formData.append('imagem_0', anuncio.imagem_0); if (anuncio.imagem_1) formData.append('imagem_1', anuncio.imagem_1); if (anuncio.imagem_2) formData.append('imagem_2', anuncio.imagem_2);
             
             const response = await fetch('salvar_anuncio.php', { method: 'POST', body: formData });
             const data = await response.json();
-            
             if (data.status === true) {
-                const txDelete = db.transaction('anuncios_pendentes', 'readwrite');
-                txDelete.objectStore('anuncios_pendentes').delete(anuncio.id);
-                self.clients.matchAll().then(clients => {
-                    clients.forEach(client => client.postMessage({ type: 'SYNC_COMPLETO' }));
-                });
+                const txDelete = db.transaction('anuncios_pendentes', 'readwrite'); txDelete.objectStore('anuncios_pendentes').delete(anuncio.id);
+                self.clients.matchAll().then(clients => { clients.forEach(client => client.postMessage({ type: 'SYNC_COMPLETO' })); });
             }
         } catch (err) { return; }
     }
-
-    self.registration.showNotification('Ocean Coffee', {
-        body: 'A internet voltou e seu anúncio foi publicado! ☕',
-        icon: 'IMG/Loginho2.png',
-        data: { url: '/meus-anuncios.html' }
-    });
+    self.registration.showNotification('Ocean Coffee', { body: 'A internet voltou e seu anúncio foi publicado! ☕', icon: 'IMG/Loginho2.png', data: { url: '/meus-anuncios.html' } });
 }
 
-// 2. Processar Edição (NOVIDADE)
+// 2. Processar Edição
 async function processarEdicoesOffline() {
     const db = await abrirCofreOffline();
     const tx = db.transaction('edicoes_pendentes', 'readonly');
     const store = tx.objectStore('edicoes_pendentes');
-    
-    const edicoesGuardadas = await new Promise(res => {
-        const req = store.getAll();
-        req.onsuccess = () => res(req.result);
-    });
-
+    const edicoesGuardadas = await new Promise(res => { const req = store.getAll(); req.onsuccess = () => res(req.result); });
     if (edicoesGuardadas.length === 0) return;
 
     for (const edicao of edicoesGuardadas) {
         try {
             const formData = new FormData();
-            formData.append('id', edicao.anuncio_id); // ID REAL NO MYSQL
-            formData.append('titulo', edicao.titulo);
-            formData.append('descricao', edicao.descricao);
-            formData.append('preco', edicao.preco);
-            formData.append('local', edicao.local);
-            formData.append('contato', edicao.contato);
-            formData.append('imagem_0', edicao.imagem_0);
-            formData.append('imagem_1', edicao.imagem_1);
-            formData.append('imagem_2', edicao.imagem_2);
+            formData.append('id', edicao.anuncio_id); formData.append('titulo', edicao.titulo); formData.append('descricao', edicao.descricao); formData.append('preco', edicao.preco); formData.append('local', edicao.local); formData.append('contato', edicao.contato); formData.append('imagem_0', edicao.imagem_0); formData.append('imagem_1', edicao.imagem_1); formData.append('imagem_2', edicao.imagem_2);
             
             const response = await fetch('atualizar_anuncio.php', { method: 'POST', body: formData });
             const data = await response.json();
-            
             if (data.status === true) {
-                const txDelete = db.transaction('edicoes_pendentes', 'readwrite');
-                txDelete.objectStore('edicoes_pendentes').delete(edicao.id_local);
-                self.clients.matchAll().then(clients => {
-                    clients.forEach(client => client.postMessage({ type: 'SYNC_COMPLETO' }));
-                });
+                const txDelete = db.transaction('edicoes_pendentes', 'readwrite'); txDelete.objectStore('edicoes_pendentes').delete(edicao.id_local);
+                self.clients.matchAll().then(clients => { clients.forEach(client => client.postMessage({ type: 'SYNC_COMPLETO' })); });
             }
         } catch (err) { return; }
     }
+    self.registration.showNotification('Ocean Coffee', { body: 'A internet voltou e as alterações no seu anúncio foram salvas! ✍️', icon: 'IMG/Loginho2.png', data: { url: '/meus-anuncios.html' } });
+}
 
-    self.registration.showNotification('Ocean Coffee', {
-        body: 'A internet voltou e as alterações no seu anúncio foram salvas! ✍️',
-        icon: 'IMG/Loginho2.png',
-        data: { url: '/meus-anuncios.html' }
-    });
+// 3. Processar Exclusão (NOVIDADE)
+async function processarExclusoesOffline() {
+    const db = await abrirCofreOffline();
+    const tx = db.transaction('exclusoes_pendentes', 'readonly');
+    const store = tx.objectStore('exclusoes_pendentes');
+    const exclusoesGuardadas = await new Promise(res => { const req = store.getAll(); req.onsuccess = () => res(req.result); });
+    if (exclusoesGuardadas.length === 0) return;
+
+    for (const exclusao of exclusoesGuardadas) {
+        try {
+            const response = await fetch('excluir_anuncio.php', { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: exclusao.anuncio_id }) 
+            });
+            const data = await response.json();
+            if (data.status === true) {
+                const txDelete = db.transaction('exclusoes_pendentes', 'readwrite'); 
+                txDelete.objectStore('exclusoes_pendentes').delete(exclusao.id_local);
+                self.clients.matchAll().then(clients => { clients.forEach(client => client.postMessage({ type: 'SYNC_COMPLETO' })); });
+            }
+        } catch (err) { return; }
+    }
+    // A exclusão aconteceu invisivelmente, podemos avisar o usuário discretamente
+    self.registration.showNotification('Ocean Coffee', { body: 'Lixeira sincronizada: anúncios excluídos com sucesso. 🗑️', icon: 'IMG/Loginho2.png', data: { url: '/meus-anuncios.html' } });
 }
