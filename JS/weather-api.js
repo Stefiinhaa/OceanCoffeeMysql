@@ -4,10 +4,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const searchForm = document.querySelector("#search");
     const container = document.querySelector("#container");
     const closePopup = document.querySelector("#close-popup");
-    const weatherToggleBtn = document.querySelector("#weather-toggle");
+    
+    // MÁGICA: Agora ele seleciona os DOIS botões (O do PC e o do Mobile)
+    const weatherToggleBtns = document.querySelectorAll("#weather-toggle, #weather-toggle-mobile");
     const alertBox = document.querySelector("#alert");
 
-    if (!searchForm || !container || !closePopup || !weatherToggleBtn || !alertBox) {
+    if (!searchForm || !container || !closePopup || weatherToggleBtns.length === 0 || !alertBox) {
         console.error("Falha ao inicializar o widget de clima.");
         return; 
     }
@@ -87,7 +89,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const humidityEl = document.querySelector("#humidity");
         const windEl = document.querySelector("#wind");
 
-        if (!weatherData || !weatherEl || !weatherToggleBtn) {
+        if (!weatherData || !weatherEl) {
             showAlert("Não foi possível obter os dados do clima.");
             return;
         }
@@ -101,14 +103,21 @@ document.addEventListener("DOMContentLoaded", () => {
         titleEl.textContent = `${weatherData.city}, ${weatherData.country}`;
         tempValueEl.innerHTML = `${weatherData.temp.toFixed(1).replace(".", ",")} <sup>C°</sup>`;
         tempDescriptionEl.textContent = description;
-        weatherToggleBtn.querySelector("i").className = "fa-solid " + faClass;
+        
+        // MÁGICA: Atualiza o ícone e a temperatura nos DOIS botões (PC e Mobile)
+        weatherToggleBtns.forEach(btn => {
+            const icon = btn.querySelector("i");
+            const span = btn.querySelector("span");
+            if (icon) icon.className = "fa-solid " + faClass;
+            if (span) span.textContent = `${weatherData.temp.toFixed(1).replace(".", ",")}°C`;
+        });
+
         tempIconEl.className = "fa-solid " + faClass;
         tempContainerEl.style.background = backgroundStyle;
         tempMaxEl.innerHTML = `${weatherData.tempMax.toFixed(1).replace(".", ",")} <sup>C°</sup>`;
         tempMinEl.innerHTML = `${weatherData.tempMin.toFixed(1).replace(".", ",")} <sup>C°</sup>`;
         humidityEl.textContent = `${weatherData.humidity}%`;
         windEl.textContent = `${weatherData.windSpeed.toFixed(1)} km/h`;
-        weatherToggleBtn.querySelector("span").textContent = `${weatherData.temp.toFixed(1).replace(".", ",")}°C`;
     }
 
     // ===================================
@@ -147,7 +156,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const { latitude, longitude, name, country_code } = location;
             const weatherData = await fetchWeather(latitude, longitude);
             showInfo({ ...weatherData, city: name, country: country_code });
-            
+        
         } catch (err) {
             console.error("Erro ao buscar por cidade:", err);
             if (!isFallback) showAlert("Ocorreu um erro ao buscar. Verifique sua conexão.");
@@ -155,24 +164,12 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     async function fetchInitialLocation() {
-        // 1. VERIFICA SE ESTÁ EM AMBIENTE SEGURO (HTTPS)
-        if (window.isSecureContext === false) {
-            console.warn("Geolocalização bloqueada: Você está testando via HTTP. O celular exige HTTPS.");
-            await fetchWeatherByCity("São Paulo", true);
-            return;
-        }
-
         if (!("geolocation" in navigator)) {
             await fetchWeatherByCity("São Paulo", true); 
             return;
         }
 
-        // Opções de GPS: Aumentei o tempo para 15 segundos!
-        const geoOptions = {
-            enableHighAccuracy: true,
-            timeout: 15000, 
-            maximumAge: 0
-        };
+        const geoOptions = { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 };
 
         navigator.geolocation.getCurrentPosition(
             async (position) => {
@@ -195,21 +192,13 @@ document.addEventListener("DOMContentLoaded", () => {
                     const weatherData = await fetchWeather(latitude, longitude);
                     showInfo({ ...weatherData, city: cidade, country: pais });
                 } catch (errClima) {
-                    console.error("Erro ao puxar o clima local:", errClima);
-                    await fetchWeatherByCity("São Paulo", true); 
+                    await fetchWeatherByCity("São Paulo", true);
                 }
             },
-            async (error) => { 
-                // 2. DIAGNÓSTICO CLARO SE O GPS FALHAR
-                let motivo = "";
-                if (error.code === 1) motivo = "Permissão Negada";
-                else if (error.code === 2) motivo = "Sinal Indisponível";
-                else if (error.code === 3) motivo = "Tempo Esgotado";
-                
-                console.warn(`GPS Falhou (${motivo}). Carregando São Paulo.`);
-                await fetchWeatherByCity("São Paulo", true); 
+            async () => { 
+                await fetchWeatherByCity("São Paulo", true);
             },
-            geoOptions 
+            geoOptions
         );
     }
 
@@ -225,12 +214,28 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     let openedByClick = false;
-    weatherToggleBtn.addEventListener("mouseenter", () => !openedByClick && container.classList.add("show"));
-    weatherToggleBtn.addEventListener("mouseleave", () => setTimeout(() => !container.matches(":hover") && !openedByClick && container.classList.remove("show"), 200));
-    weatherToggleBtn.addEventListener("click", () => { container.classList.add("show"); openedByClick = true; });
+    
+    // Adiciona os eventos de clique/hover nos DOIS botões
+    weatherToggleBtns.forEach(btn => {
+        btn.addEventListener("mouseenter", () => !openedByClick && container.classList.add("show"));
+        btn.addEventListener("mouseleave", () => setTimeout(() => !container.matches(":hover") && !openedByClick && container.classList.remove("show"), 200));
+        btn.addEventListener("click", () => { container.classList.add("show"); openedByClick = true; });
+    });
+
     closePopup.addEventListener("click", () => { container.classList.remove("show"); openedByClick = false; });
-    document.addEventListener("click", (e) => { if (!container.contains(e.target) && !weatherToggleBtn.contains(e.target) && openedByClick) { container.classList.remove("show"); openedByClick = false; }});
+    
+    document.addEventListener("click", (e) => { 
+        let clickedToggle = false;
+        weatherToggleBtns.forEach(btn => { if (btn.contains(e.target)) clickedToggle = true; });
+        
+        if (!container.contains(e.target) && !clickedToggle && openedByClick) { 
+            container.classList.remove("show"); 
+            openedByClick = false; 
+        }
+    });
+    
     container.addEventListener("mouseleave", () => !openedByClick && container.classList.remove("show"));
 
+    // Inicia a localização 
     fetchInitialLocation(); 
 });

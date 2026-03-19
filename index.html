@@ -60,11 +60,20 @@
     </div>
   </header>
 
-  <header class="mobile-header">
+<header class="mobile-header" style="z-index: 1050;">
       <a href="index.html"><img src="IMG/Loginho2.png" alt="Logo Ocean Coffee" class="logo-img"></a>
-      <button class="menu-toggle" id="menu-toggle" aria-label="Abrir menu">
-          <i class="fas fa-bars"></i>
-      </button>
+      
+      <div style="display: flex; align-items: center; gap: 15px;">
+          
+          <div id="weather-toggle-mobile" style="color: white; font-size: 1.2rem; cursor: pointer; display: flex; align-items: center; gap: 5px;">
+              <i class="fa-solid fa-cloud-sun"></i>
+              <span style="font-size: 0.9rem; font-weight: 600;">--°C</span>
+          </div>
+          
+          <button class="menu-toggle" id="menu-toggle" aria-label="Abrir menu">
+              <i class="fas fa-bars"></i>
+          </button>
+      </div>
   </header>
 
   <div class="nav-overlay" id="nav-overlay"></div>
