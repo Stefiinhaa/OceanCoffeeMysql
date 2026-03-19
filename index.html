@@ -20,26 +20,13 @@
     crossorigin="anonymous" referrerpolicy="no-referrer" />
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 
-<style>
-  #fundo {
-    height: 100vh;
-    background-image: url("IMG/Fundo.png");
-    background-size: cover;
-  }
-  
-  /* CORREÇÃO MÁGICA DO WIDGET DO CLIMA NO MOBILE */
-  @media (max-width: 768px) {
-      #container.popup {
-          position: fixed !important;
-          top: 75px !important;
-          left: 50% !important;
-          transform: translateX(-50%) !important;
-          width: 90% !important;
-          max-width: 320px !important;
-          z-index: 9999 !important; /* Força a ficar por cima de tudo */
-      }
-  }
-</style>
+  <style>
+    #fundo {
+      height: 100vh;
+      background-image: url("IMG/Fundo.png");
+      background-size: cover;
+    }
+  </style>
 </head>
 
 <body>
@@ -73,22 +60,13 @@
     </div>
   </header>
 
-<header class="mobile-header" style="justify-content: space-between; align-items: center; z-index: 1050; padding: 10px 20px;">
-      <a href="index.html" style="display: flex; align-items: center;">
-          <img src="IMG/Loginho2.png" alt="Logo Ocean Coffee" class="logo-img" style="height: 40px; width: auto; margin: 0;">
-      </a>
-      
-      <div style="display: flex; align-items: center; gap: 15px;">
-          <div id="weather-toggle-mobile" style="color: white; cursor: pointer; display: flex; align-items: center; gap: 6px; background-color: rgba(255, 255, 255, 0.15); padding: 5px 12px; border-radius: 8px;">
-              <i class="fa-solid fa-cloud-sun"></i>
-              <span style="font-size: 0.85rem; font-weight: 600; white-space: nowrap;">--°C</span>
-          </div>
-          
-          <button class="menu-toggle" id="menu-toggle" aria-label="Abrir menu" style="margin: 0; padding: 0;">
-              <i class="fas fa-bars"></i>
-          </button>
-      </div>
+  <header class="mobile-header">
+      <a href="index.html"><img src="IMG/Loginho2.png" alt="Logo Ocean Coffee" class="logo-img"></a>
+      <button class="menu-toggle" id="menu-toggle" aria-label="Abrir menu">
+          <i class="fas fa-bars"></i>
+      </button>
   </header>
+
   <div class="nav-overlay" id="nav-overlay"></div>
   <nav class="mobile-nav" id="mobile-nav">
       <div class="mobile-nav-header">
