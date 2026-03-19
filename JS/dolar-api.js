@@ -13,7 +13,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // --- API PRINCIPAL (AwesomeAPI) ---
     async function buscarAPIPrincipal() {
-        const res = await fetch("https://economia.awesomeapi.com.br/json/last/USD-BRL");
+        const res = await fetch("https://open.er-api.com/v6/latest/USD");
         if (!res.ok) throw new Error("API Principal falhou na resposta.");
         const dados = await res.json();
         if (!dados || !dados.USDBRL || !dados.USDBRL.ask) throw new Error("Formato da API Principal inválido.");
@@ -22,7 +22,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // --- API RESERVA (Open Exchange Rates) ---
     async function buscarAPIReserva() {
-        const res = await fetch("https://open.er-api.com/v6/latest/USD");
+        const res = await fetch("https://economia.awesomeapi.com.br/json/last/USD-BRL");
         if (!res.ok) throw new Error("API Reserva falhou na resposta.");
         const dados = await res.json();
         if (!dados || !dados.rates || !dados.rates.BRL) throw new Error("Formato da API Reserva inválido.");
