@@ -148,8 +148,6 @@ document.addEventListener("DOMContentLoaded", () => {
             const weatherData = await fetchWeather(latitude, longitude);
             showInfo({ ...weatherData, city: name, country: country_code });
             
-            if (isFallback) console.log("Mostrando fallback para São Paulo.");
-        
         } catch (err) {
             console.error("Erro ao buscar por cidade:", err);
             if (!isFallback) showAlert("Ocorreu um erro ao buscar. Verifique sua conexão.");
@@ -157,15 +155,22 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     async function fetchInitialLocation() {
+        // 1. VERIFICA SE ESTÁ EM AMBIENTE SEGURO (HTTPS)
+        if (window.isSecureContext === false) {
+            console.warn("Geolocalização bloqueada: Você está testando via HTTP. O celular exige HTTPS.");
+            await fetchWeatherByCity("São Paulo", true);
+            return;
+        }
+
         if (!("geolocation" in navigator)) {
             await fetchWeatherByCity("São Paulo", true); 
             return;
         }
 
-        // Opções de GPS: Força alta precisão e dá tempo (10 segundos) para o GPS responder!
+        // Opções de GPS: Aumentei o tempo para 15 segundos!
         const geoOptions = {
             enableHighAccuracy: true,
-            timeout: 10000,
+            timeout: 15000, 
             maximumAge: 0
         };
 
@@ -175,33 +180,36 @@ document.addEventListener("DOMContentLoaded", () => {
                 let cidade = "Local Atual";
                 let pais = "BR";
 
-                // Tenta descobrir o nome da cidade usando as coordenadas exatas
                 try {
                     const geoRes = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=pt`);
                     if (geoRes.ok) {
                         const geoData = await geoRes.json();
-                        // Tenta ser o mais preciso possível com o nome do local
                         cidade = geoData.city || geoData.locality || geoData.principalSubdivision || "Local Atual";
                         pais = geoData.countryCode || "BR";
                     }
                 } catch (err) {
-                    console.warn("Aviso: Nome da cidade bloqueado pela rede, usando nome genérico.");
+                    console.warn("Nome da cidade bloqueado, usando genérico.");
                 }
 
-                // Carrega o clima das coordenadas EXATAS que o GPS informou (mesmo se o nome falhar)
                 try {
                     const weatherData = await fetchWeather(latitude, longitude);
                     showInfo({ ...weatherData, city: cidade, country: pais });
                 } catch (errClima) {
                     console.error("Erro ao puxar o clima local:", errClima);
-                    await fetchWeatherByCity("São Paulo", true); // Fallback absoluto
+                    await fetchWeatherByCity("São Paulo", true); 
                 }
             },
             async (error) => { 
-                console.warn(`GPS Falhou (Motivo: ${error.message}). Carregando São Paulo.`);
-                await fetchWeatherByCity("São Paulo", true); // Fallback absoluto
+                // 2. DIAGNÓSTICO CLARO SE O GPS FALHAR
+                let motivo = "";
+                if (error.code === 1) motivo = "Permissão Negada";
+                else if (error.code === 2) motivo = "Sinal Indisponível";
+                else if (error.code === 3) motivo = "Tempo Esgotado";
+                
+                console.warn(`GPS Falhou (${motivo}). Carregando São Paulo.`);
+                await fetchWeatherByCity("São Paulo", true); 
             },
-            geoOptions // Passa as configurações de alta precisão
+            geoOptions 
         );
     }
 
@@ -224,6 +232,5 @@ document.addEventListener("DOMContentLoaded", () => {
     document.addEventListener("click", (e) => { if (!container.contains(e.target) && !weatherToggleBtn.contains(e.target) && openedByClick) { container.classList.remove("show"); openedByClick = false; }});
     container.addEventListener("mouseleave", () => !openedByClick && container.classList.remove("show"));
 
-    // Inicia a localização 
     fetchInitialLocation(); 
 });

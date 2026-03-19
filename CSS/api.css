@@ -160,7 +160,7 @@
 #container.popup {
   position: absolute;
   /* Altere de 'fixed' para 'absolute' */
-  top: 80px;
+
   right: 20px;
   z-index: 1001;
   opacity: 0;
