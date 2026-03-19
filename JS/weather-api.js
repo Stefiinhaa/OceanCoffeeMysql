@@ -10,8 +10,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Verificação profissional de elementos
     if (!searchForm || !container || !closePopup || !weatherToggleBtn || !alertBox) {
-        console.error("Falha ao inicializar o widget de clima. Elementos essenciais do DOM não foram encontrados.");
-        return; // Para a execução se o HTML estiver quebrado
+        return; // Para a execução silenciosamente se o HTML estiver incompleto
     }
 
     // ===================================
@@ -68,14 +67,11 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    function showAlert(msg) {
-        alertBox.textContent = msg;
-        if (msg) {
-            alertBox.style.display = 'block';
-            setTimeout(() => { alertBox.style.display = 'none'; }, 5000);
-        } else {
-            alertBox.style.display = 'none';
-        }
+    function hideWidget() {
+        // Esconde completamente o widget para evitar componentes vazios na tela
+        weatherToggleBtn.style.display = 'none';
+        container.style.display = 'none';
+        alertBox.style.display = 'none';
     }
 
     function showInfo(weatherData) {
@@ -91,10 +87,13 @@ document.addEventListener("DOMContentLoaded", () => {
         const windEl = document.querySelector("#wind");
 
         if (!weatherData || !weatherEl || !weatherToggleBtn) {
-            showAlert("Não foi possível obter os dados do clima.");
+            hideWidget();
             return;
         }
-        showAlert("");
+        
+        // Garante que a interface volta ao normal e sem alertas em caso de sucesso
+        weatherToggleBtn.style.display = ''; 
+        alertBox.style.display = 'none';
         weatherEl.classList.add("show");
 
         const description = getWeatherDescription(weatherData.weathercode);
@@ -121,9 +120,9 @@ document.addEventListener("DOMContentLoaded", () => {
     async function fetchWeather(lat, lon) {
         const meteoUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weathercode,wind_speed_10m,relative_humidity_2m,is_day&daily=temperature_2m_max,temperature_2m_min&timezone=auto`;
         const response = await fetch(meteoUrl);
-        if (!response.ok) throw new Error(`API de clima falhou: ${response.status}`);
+        if (!response.ok) throw new Error();
         const data = await response.json();
-        if (!data.current || !data.daily) throw new Error("Dados climáticos da API incompletos.");
+        if (!data.current || !data.daily) throw new Error();
         return {
             temp: data.current.temperature_2m,
             tempMax: data.daily.temperature_2m_max[0],
@@ -139,11 +138,11 @@ document.addEventListener("DOMContentLoaded", () => {
         try {
             const geoUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(cityName)}&count=1&language=pt&format=json`;
             const geoRes = await fetch(geoUrl);
-            if (!geoRes.ok) throw new Error(`API de geocodificação falhou: ${geoRes.status}`);
+            if (!geoRes.ok) throw new Error();
             
             const geoData = await geoRes.json();
             if (!geoData.results || geoData.results.length === 0) {
-                if (!isFallback) showAlert(`Não foi possível encontrar a cidade "${cityName}".`);
+                if (isFallback) hideWidget();
                 return;
             }
             
@@ -151,29 +150,25 @@ document.addEventListener("DOMContentLoaded", () => {
             const { latitude, longitude, name, country_code } = location;
             const weatherData = await fetchWeather(latitude, longitude);
             showInfo({ ...weatherData, city: name, country: country_code });
-            
-            if (isFallback) showAlert("Mostrando clima para São Paulo. Busque sua cidade.");
         
         } catch (err) {
-            console.error("Erro ao buscar por cidade:", err);
-            if (!isFallback) showAlert("Ocorreu um erro ao buscar. Verifique sua conexão.");
-            // Se o fallback falhar, ele falha silenciosamente.
+            // Falha silenciosamente ou esconde caso seja a última tentativa (fallback)
+            if (isFallback) hideWidget();
         }
     }
 
     async function fetchInitialLocation() {
         if (!("geolocation" in navigator)) {
-            showAlert("Seu navegador não suporta geolocalização.");
             await fetchWeatherByCity("São Paulo", true); // FALLBACK
             return;
         }
 
         navigator.geolocation.getCurrentPosition(
-            async (position) => { // SUCESSO
+            async (position) => { // SUCESSO DE LOCALIZAÇÃO
                 try {
                     const { latitude, longitude } = position.coords;
                     const geoRes = await fetch(`https://geocode.maps.co/reverse?lat=${latitude}&lon=${longitude}`);
-                    if (!geoRes.ok) throw new Error(`API de geocodificação reversa falhou: ${geoRes.status}`);
+                    if (!geoRes.ok) throw new Error();
                     
                     const geoData = await geoRes.json();
                     const cidade = geoData.address?.city || geoData.address?.town || geoData.address?.village || "Sua Localização";
@@ -182,14 +177,11 @@ document.addEventListener("DOMContentLoaded", () => {
                     showInfo({ ...weatherData, city: cidade, country: pais });
                 
                 } catch (err) {
-                    console.error("Erro ao buscar clima inicial:", err);
-                    showAlert("Não foi possível carregar o clima local.");
-                    await fetchWeatherByCity("São Paulo", true); // FALLBACK
+                    await fetchWeatherByCity("São Paulo", true); // FALLBACK SILENCIOSO
                 }
             },
             async () => { // ERRO OU PERMISSÃO NEGADA
-                showAlert("Localização negada. Carregando clima de São Paulo.");
-                await fetchWeatherByCity("São Paulo", true); // FALLBACK
+                await fetchWeatherByCity("São Paulo", true); // FALLBACK SILENCIOSO
             }
         );
     }
@@ -200,7 +192,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     searchForm.addEventListener("submit", async (e) => {
         e.preventDefault();
-        showAlert(""); // Limpa alertas
+        alertBox.style.display = 'none'; // Garante que a box de alerta não apareça
         const city = document.querySelector("#city_name").value.trim();
         if (!city) return;
         await fetchWeatherByCity(city, false);
@@ -215,5 +207,5 @@ document.addEventListener("DOMContentLoaded", () => {
     container.addEventListener("mouseleave", () => !openedByClick && container.classList.remove("show"));
 
     // --- Execução Inicial ---
-    fetchInitialLocation(); // Busca o clima (agora com fallback)
+    fetchInitialLocation(); 
 });
