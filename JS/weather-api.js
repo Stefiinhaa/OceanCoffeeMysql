@@ -1,23 +1,20 @@
 // JS/weather-api.js
 document.addEventListener("DOMContentLoaded", () => {
     
-    // --- Seletores Globais do Widget ---
     const searchForm = document.querySelector("#search");
     const container = document.querySelector("#container");
     const closePopup = document.querySelector("#close-popup");
     const weatherToggleBtn = document.querySelector("#weather-toggle");
     const alertBox = document.querySelector("#alert");
 
-    // Verificação profissional de elementos
     if (!searchForm || !container || !closePopup || !weatherToggleBtn || !alertBox) {
-        console.error("Falha ao inicializar o widget de clima. Elementos essenciais do DOM não foram encontrados.");
+        console.error("Falha ao inicializar o widget de clima.");
         return; 
     }
 
     // ===================================
     //  FUNÇÕES DE HELPER DO CLIMA
     // ===================================
-
     function getTempBackground(code, isDay) {
         const colors = {
             dayClear: 'linear-gradient(170deg, #3786dd, #63a4ff)',
@@ -117,7 +114,6 @@ document.addEventListener("DOMContentLoaded", () => {
     // ===================================
     //  FUNÇÕES DE API DO CLIMA
     // ===================================
-
     async function fetchWeather(lat, lon) {
         const meteoUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weathercode,wind_speed_10m,relative_humidity_2m,is_day&daily=temperature_2m_max,temperature_2m_min&timezone=auto`;
         const response = await fetch(meteoUrl);
@@ -152,7 +148,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const weatherData = await fetchWeather(latitude, longitude);
             showInfo({ ...weatherData, city: name, country: country_code });
             
-            if (isFallback) console.log("Mostrando clima para São Paulo. Busque sua cidade.");
+            if (isFallback) console.log("Mostrando fallback para São Paulo.");
         
         } catch (err) {
             console.error("Erro ao buscar por cidade:", err);
@@ -162,48 +158,56 @@ document.addEventListener("DOMContentLoaded", () => {
 
     async function fetchInitialLocation() {
         if (!("geolocation" in navigator)) {
-            await fetchWeatherByCity("São Paulo", true); // FALLBACK
+            await fetchWeatherByCity("São Paulo", true); 
             return;
         }
 
-        // Tenta obter a localização do utilizador
-        navigator.geolocation.getCurrentPosition(
-            async (position) => { // SUCESSO: O UTILIZADOR PERMITIU
-                try {
-                    const { latitude, longitude } = position.coords;
-                    
-                    // NOVA API 100% GRATUITA E RÁPIDA (BigDataCloud)
-                    const geoRes = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=pt`);
-                    
-                    let cidade = "Sua Localização";
-                    let pais = "";
+        // Opções de GPS: Força alta precisão e dá tempo (10 segundos) para o GPS responder!
+        const geoOptions = {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 0
+        };
 
+        navigator.geolocation.getCurrentPosition(
+            async (position) => {
+                const { latitude, longitude } = position.coords;
+                let cidade = "Local Atual";
+                let pais = "BR";
+
+                // Tenta descobrir o nome da cidade usando as coordenadas exatas
+                try {
+                    const geoRes = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=pt`);
                     if (geoRes.ok) {
                         const geoData = await geoRes.json();
-                        cidade = geoData.city || geoData.locality || "Sua Localização";
-                        pais = geoData.countryCode || "";
+                        // Tenta ser o mais preciso possível com o nome do local
+                        cidade = geoData.city || geoData.locality || geoData.principalSubdivision || "Local Atual";
+                        pais = geoData.countryCode || "BR";
                     }
-                    
+                } catch (err) {
+                    console.warn("Aviso: Nome da cidade bloqueado pela rede, usando nome genérico.");
+                }
+
+                // Carrega o clima das coordenadas EXATAS que o GPS informou (mesmo se o nome falhar)
+                try {
                     const weatherData = await fetchWeather(latitude, longitude);
                     showInfo({ ...weatherData, city: cidade, country: pais });
-                
-                } catch (err) {
-                    console.error("Erro ao buscar clima inicial:", err);
-                    await fetchWeatherByCity("São Paulo", true); // FALLBACK SE ALGO DER ERRO
+                } catch (errClima) {
+                    console.error("Erro ao puxar o clima local:", errClima);
+                    await fetchWeatherByCity("São Paulo", true); // Fallback absoluto
                 }
             },
-            async () => { 
-                // ERRO: O UTILIZADOR CLICOU EM "BLOQUEAR" OU DEMOROU MUITO
-                console.warn("Acesso à localização negado ou falhou. Carregando São Paulo.");
-                await fetchWeatherByCity("São Paulo", true); // FALLBACK
-            }
+            async (error) => { 
+                console.warn(`GPS Falhou (Motivo: ${error.message}). Carregando São Paulo.`);
+                await fetchWeatherByCity("São Paulo", true); // Fallback absoluto
+            },
+            geoOptions // Passa as configurações de alta precisão
         );
     }
 
     // ===================================
     //  EXECUÇÃO E EVENT LISTENERS
     // ===================================
-
     searchForm.addEventListener("submit", async (e) => {
         e.preventDefault();
         showAlert(""); 
@@ -220,6 +224,6 @@ document.addEventListener("DOMContentLoaded", () => {
     document.addEventListener("click", (e) => { if (!container.contains(e.target) && !weatherToggleBtn.contains(e.target) && openedByClick) { container.classList.remove("show"); openedByClick = false; }});
     container.addEventListener("mouseleave", () => !openedByClick && container.classList.remove("show"));
 
-    // --- Execução Inicial ---
+    // Inicia a localização 
     fetchInitialLocation(); 
 });
