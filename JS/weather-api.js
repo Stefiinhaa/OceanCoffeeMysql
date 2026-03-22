@@ -167,21 +167,29 @@ document.addEventListener("DOMContentLoaded", () => {
             async (position) => { // SUCESSO DE LOCALIZAÇÃO
                 try {
                     const { latitude, longitude } = position.coords;
-                    const geoRes = await fetch(`https://geocode.maps.co/reverse?lat=${latitude}&lon=${longitude}`);
+                    
+                    // Usando uma API gratuita e sem limites chatos para pegar o nome da cidade
+                    const geoRes = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=pt`);
+                    
                     if (!geoRes.ok) throw new Error();
                     
                     const geoData = await geoRes.json();
-                    const cidade = geoData.address?.city || geoData.address?.town || geoData.address?.village || "Sua Localização";
-                    const pais = geoData.address?.country_code?.toUpperCase() || "";
+                    
+                    // Pega a cidade ou bairro, se não achar põe "Sua Localização"
+                    const cidade = geoData.city || geoData.locality || "Sua Localização";
+                    const pais = geoData.countryCode || "";
+                    
                     const weatherData = await fetchWeather(latitude, longitude);
                     showInfo({ ...weatherData, city: cidade, country: pais });
                 
                 } catch (err) {
-                    await fetchWeatherByCity("São Paulo", true); // FALLBACK SILENCIOSO
+                    console.error("Erro ao descobrir cidade, carregando padrão:", err);
+                    await fetchWeatherByCity("São Paulo", true); // FALLBACK
                 }
             },
-            async () => { // ERRO OU PERMISSÃO NEGADA
-                await fetchWeatherByCity("São Paulo", true); // FALLBACK SILENCIOSO
+            async (erro) => { // ERRO OU PERMISSÃO NEGADA
+                console.log("Pessoa não permitiu a localização. Carregando padrão.");
+                await fetchWeatherByCity("São Paulo", true); // FALLBACK
             }
         );
     }
