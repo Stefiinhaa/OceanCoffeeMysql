@@ -515,6 +515,16 @@
         }
 
         // --- Funções Utilitárias ---
+
+        // --- Funções Utilitárias ---
+        function formatarTelefone(numero) {
+            if (!numero) return 'Não informado';
+            const digitos = numero.replace(/\D/g, '');
+            if (digitos.length === 11) return digitos.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+            if (digitos.length === 10) return digitos.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
+            return numero; 
+        }
+
         function showToast(message, type = 'success') {
             const toast = document.createElement('div');
             toast.className = `toast-notification ${type}`;
@@ -676,7 +686,7 @@
             const dataUTC = new Date(dataString.includes('Z') ? dataString : dataString + "Z");
             document.getElementById('modal-data').textContent = dataUTC.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
             document.getElementById('modal-local').textContent = produto.local || 'Não informado.';
-            document.getElementById('modal-contato').textContent = produto.contato || 'Não informado.';
+            document.getElementById('modal-contato').textContent = formatarTelefone(produto.contato);
             document.getElementById('modal-preco').textContent = parseFloat(produto.preco).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     
             const carrosselContainer = document.getElementById('modal-carrossel');
