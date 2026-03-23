@@ -1,4 +1,3 @@
-// JS/weather-api.js
 document.addEventListener("DOMContentLoaded", () => {
 
     const searchForm = document.querySelector("#search");
@@ -86,7 +85,7 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
         
-        // Exibe a temperatura nos dois botões
+
         weatherToggleBtns.forEach(btn => btn.style.display = '');
         alertBox.style.display = 'none';
         weatherEl.classList.add("show");
@@ -151,9 +150,10 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    async function fetchInitialLocation() {
+async function fetchInitialLocation() {
+        // Se o navegador não suportar localização, carrega Garça
         if (!("geolocation" in navigator)) {
-            await fetchWeatherByCity("São Paulo", true);
+            await fetchWeatherByCity("Garça", true); 
             return;
         }
 
@@ -172,11 +172,13 @@ document.addEventListener("DOMContentLoaded", () => {
                     showInfo({ ...weatherData, city: cidade, country: pais });
                 
                 } catch (err) {
-                    await fetchWeatherByCity("São Paulo", true);
+                    // Se der erro ao descobrir o nome da cidade, carrega Garça
+                    await fetchWeatherByCity("Garça", true); 
                 }
             },
             async () => {
-                await fetchWeatherByCity("São Paulo", true);
+                // Se a pessoa clicar em "Bloquear" ou ignorar a permissão, carrega Garça
+                await fetchWeatherByCity("Garça", true); 
             }
         );
     }
