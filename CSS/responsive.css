@@ -390,3 +390,14 @@ body {
      .service-card h3 { font-size: 18px !important; }
 
 } /* Fim do @media (max-width: 576px) */
+
+
+/* Ajuste para a caixinha de clima no celular */
+@media (max-width: 992px) {
+    #container.popup {
+        right: 50% !important;
+        transform: translateX(50%);
+        top: 70px;
+        width: 90%;
+    }
+}
