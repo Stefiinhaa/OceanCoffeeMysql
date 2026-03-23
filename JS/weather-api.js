@@ -151,38 +151,39 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
 async function fetchInitialLocation() {
-        // Se o navegador não suportar localização, carrega Garça
-        if (!("geolocation" in navigator)) {
-            await fetchWeatherByCity("Garça", true); 
-            return;
-        }
-
-        navigator.geolocation.getCurrentPosition(
-            async (position) => {
-                try {
-                    const { latitude, longitude } = position.coords;
-                    const geoRes = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=pt`);
-                    if (!geoRes.ok) throw new Error();
-                    
-                    const geoData = await geoRes.json();
-                    const cidade = geoData.city || geoData.locality || "Sua Localização";
-                    const pais = geoData.countryCode || "";
-                    
-                    const weatherData = await fetchWeather(latitude, longitude);
-                    showInfo({ ...weatherData, city: cidade, country: pais });
-                
-                } catch (err) {
-                    // Se der erro ao descobrir o nome da cidade, carrega Garça
-                    await fetchWeatherByCity("Garça", true); 
-                }
-            },
-            async () => {
-                // Se a pessoa clicar em "Bloquear" ou ignorar a permissão, carrega Garça
-                await fetchWeatherByCity("Garça", true); 
-            }
-        );
+    if (!("geolocation" in navigator)) {
+        await fetchWeatherByCity("Garça", true); 
+        return;
     }
 
+    navigator.geolocation.getCurrentPosition(
+        async (position) => {
+            try {
+                const { latitude, longitude } = position.coords;
+                const geoRes = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=pt`);
+                if (!geoRes.ok) throw new Error();
+                
+                const geoData = await geoRes.json();
+                const cidade = geoData.city || geoData.locality || "Sua Localização";
+                const pais = geoData.countryCode || "";
+                
+                const weatherData = await fetchWeather(latitude, longitude);
+                showInfo({ ...weatherData, city: cidade, country: pais });
+            
+            } catch (err) {
+                await fetchWeatherByCity("Garça", true); 
+            }
+        },
+        async () => {
+            await fetchWeatherByCity("Garça", true); 
+        },
+        {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 0
+        }
+    );
+}
     searchForm.addEventListener("submit", async (e) => {
         e.preventDefault();
         alertBox.style.display = 'none';
