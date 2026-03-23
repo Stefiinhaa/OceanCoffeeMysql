@@ -393,24 +393,28 @@ body {
 
 
 .header-botoes-mobile {
-    display: flex;
+    display: flex !important;
     align-items: center;
     gap: 15px;
 }
 
 #weather-toggle-mobile {
-    display: flex;
+    display: flex !important;
     align-items: center;
     gap: 8px;
     font-weight: 600;
     cursor: pointer;
+    z-index: 9999;
 }
 
 @media (max-width: 992px) {
-    #weather-toggle-mobile,
-    .menu-toggle {
-        color: white;
+    /* Força os ícones e textos a ficarem brancos nos tablets */
+    #weather-toggle-mobile i,
+    #weather-toggle-mobile span,
+    .menu-toggle i {
+        color: white !important;
     }
+    
     #container.popup {
         right: 50% !important;
         transform: translateX(50%);
@@ -420,8 +424,10 @@ body {
 }
 
 @media (max-width: 576px) {
-    #weather-toggle-mobile,
-    .menu-toggle {
-        color: #3e2f1c; 
+    /* Força os ícones e textos a ficarem escuros no celular (fundo branco) */
+    #weather-toggle-mobile i,
+    #weather-toggle-mobile span,
+    .menu-toggle i {
+        color: #3e2f1c !important; 
     }
 }
