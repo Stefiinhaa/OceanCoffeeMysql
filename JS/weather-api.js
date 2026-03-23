@@ -149,41 +149,61 @@ document.addEventListener("DOMContentLoaded", () => {
             if (isFallback) hideWidget();
         }
     }
+    async function fetchInitialLocation() {
+        async function buscarPorIP() {
+            try {
+                const respostaIP = await fetch('https://get.geojs.io/v1/ip/geo.json');
+                if (!respostaIP.ok) throw new Error();
+                const dadosIP = await respostaIP.json();
+                
+                const lat = dadosIP.latitude;
+                const lon = dadosIP.longitude;
+                const cidade = dadosIP.city || "Sua Localização";
+                const pais = dadosIP.countryCode || "";
+                
+                const climaData = await fetchWeather(lat, lon);
+                showInfo({ ...climaData, city: cidade, country: pais });
+            } catch (erro) {
+                await fetchWeatherByCity("Garça", true);
+            }
+        }
 
-async function fetchInitialLocation() {
-    if (!("geolocation" in navigator)) {
-        await fetchWeatherByCity("Garça", true); 
-        return;
+        if (!("geolocation" in navigator)) {
+            await buscarPorIP();
+            return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+            async (posicao) => {
+                try {
+                    const lat = posicao.coords.latitude;
+                    const lon = posicao.coords.longitude;
+                    
+                    const geoRes = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=pt`);
+                    if (!geoRes.ok) throw new Error();
+                    
+                    const geoData = await geoRes.json();
+                    const cidade = geoData.city || geoData.locality || "Sua Localização";
+                    const pais = geoData.countryCode || "";
+                    
+                    const climaData = await fetchWeather(lat, lon);
+                    showInfo({ ...climaData, city: cidade, country: pais });
+                } catch (erro) {
+                    await buscarPorIP();
+                }
+            },
+            async () => {
+                await buscarPorIP();
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 0
+            }
+        );
     }
 
-    navigator.geolocation.getCurrentPosition(
-        async (position) => {
-            try {
-                const { latitude, longitude } = position.coords;
-                const geoRes = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=pt`);
-                if (!geoRes.ok) throw new Error();
-                
-                const geoData = await geoRes.json();
-                const cidade = geoData.city || geoData.locality || "Sua Localização";
-                const pais = geoData.countryCode || "";
-                
-                const weatherData = await fetchWeather(latitude, longitude);
-                showInfo({ ...weatherData, city: cidade, country: pais });
-            
-            } catch (err) {
-                await fetchWeatherByCity("Garça", true); 
-            }
-        },
-        async () => {
-            await fetchWeatherByCity("Garça", true); 
-        },
-        {
-            enableHighAccuracy: true,
-            timeout: 10000,
-            maximumAge: 0
-        }
-    );
-}
+
     searchForm.addEventListener("submit", async (e) => {
         e.preventDefault();
         alertBox.style.display = 'none';
