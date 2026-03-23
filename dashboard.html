@@ -832,46 +832,53 @@
             }
         }
         
-       function renderStatusPieChart(stats) {
-            const { approved, pending, rejected } = stats;
-            const ctx = document.getElementById('statusPieChart').getContext('2d');
+function renderStatusPieChart(stats) {
+    const { approved, pending, rejected } = stats;
+    const ctx = document.getElementById('statusPieChart').getContext('2d');
 
-             if (window.myStatusPieChart instanceof Chart) {
-                 window.myStatusPieChart.destroy();
-             }
+    if (window.myStatusPieChart instanceof Chart) {
+        window.myStatusPieChart.destroy();
+    }
 
-            window.myStatusPieChart = new Chart(ctx, {
-                type: 'pie', 
-                data: { 
-                    labels: ['Aprovados', 'Pendentes', 'Rejeitados'], 
-                    datasets: [{ 
-                        data: [approved, pending, rejected], 
-                        backgroundColor: ['#28a745', '#ffc107', '#dc3545'], 
-                        borderColor: '#ffffff', 
-                        borderWidth: 3, 
-                        hoverOffset: 4 
-                    }] 
+    window.myStatusPieChart = new Chart(ctx, {
+        type: 'pie', 
+        data: { 
+            labels: ['Aprovados', 'Pendentes', 'Rejeitados'], 
+            datasets: [{ 
+                data: [approved, pending, rejected], 
+                backgroundColor: ['#28a745', '#ffc107', '#dc3545'], 
+                borderColor: '#ffffff', 
+                borderWidth: 3, 
+                hoverOffset: 4 
+            }] 
+        },
+        options: { 
+            responsive: true, 
+            maintainAspectRatio: false, 
+            plugins: { 
+                legend: { position: 'bottom', labels: { padding: 20 } }, 
+                tooltip: { 
+                    callbacks: { 
+                        label: (ctx) => {
+                            const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                            const valor = ctx.parsed;
+                            const porcentagem = total > 0 ? ((valor / total) * 100).toFixed(1) + '%' : '0%';
+                            return `${ctx.label}: ${valor} (${porcentagem})`;
+                        } 
+                    } 
                 },
-                options: { 
-                    responsive: true, 
-                    maintainAspectRatio: false, 
-                    plugins: { 
-                        legend: { position: 'bottom', labels: { padding: 20 } }, 
-                        tooltip: { callbacks: { label: ctx => `${ctx.label}: ${ctx.parsed}` } },
-                        datalabels: {
-                            display: true, color: '#fff', font: { weight: 'bold', size: 14 },
-                            formatter: (value, ctx) => {
-                                const total = ctx.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
-                                if (total === 0 || value === 0) return ''; 
-                                const percentage = ((value / total) * 100).toFixed(0) + '%';
-                                return (value / total) > 0.05 ? percentage : '';
-                            }
-                        }
+                datalabels: {
+                    display: true, color: '#fff', font: { weight: 'bold', size: 14 },
+                    formatter: (value, ctx) => {
+                        const total = ctx.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+                        if (total === 0 || value === 0) return ''; 
+                        return ((value / total) * 100).toFixed(1) + '%';
                     }
                 }
-            });
+            }
         }
-        
+    });
+}
         // --- LÓGICA DO RELATÓRIO DE TELA CHEIA ---
         
         function showDashboardView() {
