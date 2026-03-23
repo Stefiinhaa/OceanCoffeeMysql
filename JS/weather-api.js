@@ -150,50 +150,38 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
     async function fetchInitialLocation() {
-        async function buscarPorIP() {
-            try {
-                const respostaIP = await fetch('https://get.geojs.io/v1/ip/geo.json');
-                if (!respostaIP.ok) throw new Error();
-                const dadosIP = await respostaIP.json();
-                
-                const lat = dadosIP.latitude;
-                const lon = dadosIP.longitude;
-                const cidade = dadosIP.city || "Sua Localização";
-                const pais = dadosIP.countryCode || "";
-                
-                const climaData = await fetchWeather(lat, lon);
-                showInfo({ ...climaData, city: cidade, country: pais });
-            } catch (erro) {
-                await fetchWeatherByCity("Garça", true);
-            }
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+        if (!isMobile) {
+            await fetchWeatherByCity("Garça", true);
+            return;
         }
 
         if (!("geolocation" in navigator)) {
-            await buscarPorIP();
+            await fetchWeatherByCity("Garça", true); 
             return;
         }
 
         navigator.geolocation.getCurrentPosition(
-            async (posicao) => {
+            async (position) => {
                 try {
-                    const lat = posicao.coords.latitude;
-                    const lon = posicao.coords.longitude;
-                    
-                    const geoRes = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=pt`);
+                    const { latitude, longitude } = position.coords;
+                    const geoRes = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=pt`);
                     if (!geoRes.ok) throw new Error();
                     
                     const geoData = await geoRes.json();
                     const cidade = geoData.city || geoData.locality || "Sua Localização";
                     const pais = geoData.countryCode || "";
                     
-                    const climaData = await fetchWeather(lat, lon);
-                    showInfo({ ...climaData, city: cidade, country: pais });
-                } catch (erro) {
-                    await buscarPorIP();
+                    const weatherData = await fetchWeather(latitude, longitude);
+                    showInfo({ ...weatherData, city: cidade, country: pais });
+                
+                } catch (err) {
+                    await fetchWeatherByCity("Garça", true); 
                 }
             },
             async () => {
-                await buscarPorIP();
+                await fetchWeatherByCity("Garça", true); 
             },
             {
                 enableHighAccuracy: true,
