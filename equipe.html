@@ -114,12 +114,14 @@
             margin: 0 auto 4rem auto;
         }
         .team-grid {
-            display: flex;            /* Altera para flex para permitir centralização dinâmica */
-            flex-wrap: wrap;          /* Mantém o comportamento de quebra de linha */
-            justify-content: center;  /* Centraliza os itens, afetando especialmente a última linha */
-            gap: 2.5rem;              /* Mantém o espaçamento original */
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2.5rem;
             max-width: 1200px;
             margin: 0 auto;
+            /* Adiciona estas duas linhas abaixo: */
+            justify-content: center;
+            justify-items: center;
         }
         .team-card {
             background-color: var(--color-surface);
