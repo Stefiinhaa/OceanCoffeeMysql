@@ -35,12 +35,14 @@
             -webkit-font-smoothing: antialiased;
         }
 
+        /* HEADER DESKTOP (WEB) */
         .oc-header {
             background-color: var(--color-surface);
             border-bottom: 1px solid var(--color-border);
             position: sticky; top: 0;
             width: 100%; height: 80px;
             z-index: 1000;
+            display: block; /* Garante que apareça na web */
         }
 
         .oc-container {
@@ -59,7 +61,7 @@
 
         .oc-header__logo-img { height: 48px; }
 
-        .oc-header-nav { display: none; }
+        .oc-header-nav { display: flex; gap: 1rem; }
         .oc-header-nav__link { 
             text-decoration: none; 
             color: var(--color-text-headings); 
@@ -73,21 +75,11 @@
             color: var(--color-primary); 
         }
 
-        .team-hero {
-            background: linear-gradient(rgba(16, 42, 67, 0.8), rgba(16, 42, 67, 0.8)), url('IMG/fundoteste4.png');
-            background-size: cover;
-            background-position: center;
-            padding: 100px 20px;
-            text-align: center;
-            color: var(--color-surface);
-            border-bottom: 5px solid var(--color-accent);
-        }
-
+        /* SEÇÃO EQUIPE - GRID */
         .team-section { padding: 80px 20px; }
         .section-title { text-align: center; font-size: 2.5rem; font-weight: 700; color: var(--color-text-headings); margin-bottom: 1rem; }
         .section-subtitle { text-align: center; font-size: 1.1rem; max-width: 600px; margin: 0 auto 4rem auto; }
 
-        /* GRID PRINCIPAL */
         .team-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -118,12 +110,9 @@
             overflow: hidden;
             transition: transform 0.3s ease, box-shadow 0.3s ease;
             border-top: 4px solid transparent;
-            width: 100%; /* No Grid o width é automático, no Flex usamos o container */
         }
 
-        .team-grid-footer .team-card {
-            max-width: 320px; /* Ajuste para manter o tamanho no flex */
-        }
+        .team-grid-footer .team-card { width: 320px; }
 
         .team-card:hover {
             transform: translateY(-10px);
@@ -157,40 +146,57 @@
             transition: transform var(--transition-base);
         }
 
-        .team-card:hover .team-card__bg-circle { transform: translate(-50%, -50%) scale(1.2); }
-
-        .team-card h3 { font-size: 1.4rem; font-weight: 600; color: var(--color-text-headings); margin-bottom: 0.25rem; }
+        .team-card h3 { font-size: 1.4rem; font-weight: 600; color: var(--color-text-headings); }
         .team-card .role { font-size: 0.95rem; color: var(--color-primary); font-weight: 500; margin-bottom: 1.5rem; }
         .team-card .bio { font-size: 0.9rem; line-height: 1.6; margin-bottom: 1.5rem; flex-grow: 1; }
 
         .social-links {
             display: flex; justify-content: center; gap: 1.5rem;
             padding-top: 1.5rem; border-top: 1px solid var(--color-border);
-            margin-top: auto;
         }
 
-        .social-links a { color: var(--color-text-body); font-size: 1.4rem; transition: all 0.3s ease; }
+        .social-links a { color: var(--color-text-body); font-size: 1.4rem; transition: 0.3s; }
         .social-links a:hover { color: var(--color-accent); transform: scale(1.2); }
 
         /* FOOTER */
         .footer { background-color: var(--color-primary); color: #A0AEC0; padding: 40px 20px; }
-        .footer-content { display: flex; flex-wrap: wrap; justify-content: space-between; max-width: 1200px; margin: auto; gap: 20px; }
-        .footer-column { flex: 1; min-width: 220px; padding: 0 15px; }
-        .footer-column h4 { font-size: 18px; color: #fff; margin-bottom: 20px; border-bottom: 1px solid var(--color-accent); padding-bottom: 10px; }
-        .footer-logo { width: 137px; margin-bottom: 15px; }
+        .footer-content { display: flex; flex-wrap: wrap; justify-content: space-between; max-width: 1200px; margin: auto; }
 
-        /* RESPONSIVIDADE */
+        /* --- CORREÇÃO: MOBILE ESCONDIDO NA WEB --- */
+        .mobile-header, .mobile-nav, .nav-overlay { 
+            display: none; /* Esconde totalmente na versão desktop */
+        }
+
+        /* RESPONSIVIDADE (MOBILE) */
         @media (max-width: 992px) {
-            .oc-header { display: none; }
-            .mobile-header { display: flex; justify-content: space-between; align-items: center; padding: 0 1.5rem; height: 60px; background-color: var(--color-surface); position: sticky; top: 0; width: 100%; z-index: 100; border-bottom: 1px solid var(--color-border); }
+            .oc-header { display: none; } /* Esconde o menu da web no celular */
+            
+            .mobile-header { 
+                display: flex; /* Mostra o cabeçalho mobile apenas no celular */
+                justify-content: space-between; 
+                align-items: center; 
+                padding: 0 1.5rem; 
+                height: 60px; 
+                background-color: var(--color-surface); 
+                position: sticky; top: 0; width: 100%; z-index: 100; 
+                border-bottom: 1px solid var(--color-border); 
+            }
+            
             .mobile-header .logo-img { height: 40px; }
             .menu-toggle { background: none; border: none; font-size: 1.5rem; cursor: pointer; }
-            .mobile-nav { position: fixed; top: 0; right: -100%; width: 80%; max-width: 300px; height: 100vh; background-color: #f9f5e7; z-index: 110; transition: right 0.35s ease; padding: 1.5rem; }
+            
+            .mobile-nav { 
+                display: flex; 
+                flex-direction: column; 
+                position: fixed; top: 0; right: -100%; 
+                width: 80%; max-width: 300px; height: 100vh; 
+                background-color: #f9f5e7; z-index: 110; 
+                transition: right 0.35s ease; padding: 1.5rem; 
+            }
             .mobile-nav.is-open { right: 0; }
-            .nav-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 105; }
-            .nav-overlay.is-open { display: block; }
+            
+            .nav-overlay.is-open { display: block; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 105; }
         }
-        @media (min-width: 993px) { .oc-header-nav { display: flex; } }
     </style>
 </head>
 <body>
@@ -213,100 +219,81 @@
 
     <div class="nav-overlay" id="nav-overlay"></div>
     <nav class="mobile-nav" id="mobile-nav">
-        <ul class="mobile-nav-links" style="list-style:none;">
-            <li><a href="index.html" style="text-decoration:none; color:#3e2f1c; display:block; padding:1rem;"><i class="fas fa-home"></i> Home</a></li>
-            <li><a href="Market.html" style="text-decoration:none; color:#3e2f1c; display:block; padding:1rem;"><i class="fas fa-store"></i> Loja</a></li>
-            <li><a href="Login.html" style="text-decoration:none; color:#3e2f1c; display:block; padding:1rem;"><i class="fas fa-sign-in-alt"></i> Login</a></li>
+        <ul style="list-style:none; padding-top: 2rem;">
+            <li><a href="index.html" style="text-decoration:none; color:#3e2f1c; font-size: 1.2rem; display:block; padding: 1rem;"><i class="fas fa-home"></i> Home</a></li>
+            <li><a href="Market.html" style="text-decoration:none; color:#3e2f1c; font-size: 1.2rem; display:block; padding: 1rem;"><i class="fas fa-store"></i> Loja</a></li>
+            <li><a href="Login.html" style="text-decoration:none; color:#3e2f1c; font-size: 1.2rem; display:block; padding: 1rem;"><i class="fas fa-sign-in-alt"></i> Login</a></li>
         </ul>
     </nav>
 
     <main>
         <section class="team-hero">
             <h1>A Mente por Trás do Café</h1>
-            <p>Conheça os especialistas apaixonados que impulsionam a inovação na Ocean Coffee.</p>
+            <p>Conheça os especialistas apaixonados que impulsionam a Ocean Coffee.</p>
         </section>
 
         <section class="team-section">
             <div class="oc-container">
                 <h2 class="section-title">Nossa Equipe de Desenvolvimento</h2>
-                <p class="section-subtitle">Estudantes de Análise e Desenvolvimento de Sistemas da Fatec Garça.</p>
                 
                 <div class="team-grid">
                     <div class="team-card">
-                        <div class="team-card__image-wrapper"><div class="team-card__bg-circle"></div><img src="IMG/Diego.jpeg" alt="Diego"></div>
+                        <div class="team-card__image-wrapper"><img src="IMG/Diego.jpeg" alt="Diego"></div>
                         <h3>Diego Colares</h3>
                         <p class="role">Gerente do Projeto</p>
-                        <p class="bio">Guia os projetos do início ao fim, alinhando equipas para inovar no mercado.</p>
-                        <div class="social-links"><a href="https://www.instagram.com/__diegocolares/" target="_blank"><i class="fab fa-instagram"></i></a></div>
+                        <div class="social-links"><a href="#"><i class="fab fa-instagram"></i></a></div>
                     </div>
                     <div class="team-card">
-                        <div class="team-card__image-wrapper"><div class="team-card__bg-circle"></div><img src="IMG/Eduarda.png" alt="Eduarda"></div>
+                        <div class="team-card__image-wrapper"><img src="IMG/Eduarda.png" alt="Eduarda"></div>
                         <h3>Eduarda Moraes</h3>
-                        <p class="role">Tech Lead & Product Owner</p>
-                        <p class="bio">Lidera o desenvolvimento técnico e garante que o produto atenda às necessidades.</p>
-                        <div class="social-links"><a href="https://www.instagram.com/_dudamartins0302/" target="_blank"><i class="fab fa-instagram"></i></a></div>
+                        <p class="role">Tech Lead</p>
+                        <div class="social-links"><a href="#"><i class="fab fa-instagram"></i></a></div>
                     </div>
                     <div class="team-card">
-                        <div class="team-card__image-wrapper"><div class="team-card__bg-circle"></div><img src="IMG/stefani.jpg" alt="Stefani"></div>
+                        <div class="team-card__image-wrapper"><img src="IMG/stefani.jpg" alt="Stefani"></div>
                         <h3>Stefani Santos</h3>
-                        <p class="role">Desenvolvedora Back-End & DBA</p>
-                        <p class="bio">Constrói a lógica do servidor e administra o banco de dados.</p>
-                        <div class="social-links"><a href="https://www.instagram.com/stefaniisant0s/" target="_blank"><i class="fab fa-instagram"></i></a></div>
+                        <p class="role">Dev Back-End</p>
+                        <div class="social-links"><a href="#"><i class="fab fa-instagram"></i></a></div>
                     </div>
                     <div class="team-card">
-                        <div class="team-card__image-wrapper"><div class="team-card__bg-circle"></div><img src="IMG/gabi.jpg" alt="Gabrielle"></div>
+                        <div class="team-card__image-wrapper"><img src="IMG/gabi.jpg" alt="Gabrielle"></div>
                         <h3>Gabrielle Rodrigues</h3>
-                        <p class="role">Marketing e Comunicação</p>
-                        <p class="bio">Transforma nossa essência em narrativas que conectam a comunidade.</p>
-                        <div class="social-links"><a href="https://www.instagram.com/gabirodriguex_/" target="_blank"><i class="fab fa-instagram"></i></a></div>
+                        <p class="role">Marketing</p>
+                        <div class="social-links"><a href="#"><i class="fab fa-instagram"></i></a></div>
                     </div>
                     <div class="team-card">
-                        <div class="team-card__image-wrapper"><div class="team-card__bg-circle"></div><img src="IMG/lyan.jpg" alt="Lyan"></div>
+                        <div class="team-card__image-wrapper"><img src="IMG/lyan.jpg" alt="Lyan"></div>
                         <h3>André Lyan</h3>
-                        <p class="role">UX/UI Designer & Quality Owner</p>
-                        <p class="bio">Projeta a jornada visual e garante a excelência da plataforma.</p>
-                        <div class="social-links"><a href="https://www.instagram.com/lyaan_latrel/" target="_blank"><i class="fab fa-instagram"></i></a></div>
+                        <p class="role">UX/UI Designer</p>
+                        <div class="social-links"><a href="#"><i class="fab fa-instagram"></i></a></div>
                     </div>
                     <div class="team-card">
-                        <div class="team-card__image-wrapper"><div class="team-card__bg-circle"></div><img src="IMG/pena.jpg" alt="João"></div>
+                        <div class="team-card__image-wrapper"><img src="IMG/pena.jpg" alt="João"></div>
                         <h3>João Vinicius</h3>
-                        <p class="role">Assistente de Projeto e Revisor</p>
-                        <p class="bio">Dá suporte à gestão e revisa cada etapa do projeto.</p>
-                        <div class="social-links"><a href="https://www.instagram.com/_joaovnx/" target="_blank"><i class="fab fa-instagram"></i></a></div>
+                        <p class="role">Revisor</p>
+                        <div class="social-links"><a href="#"><i class="fab fa-instagram"></i></a></div>
                     </div>
                 </div>
 
                 <div class="team-grid-footer">
                     <div class="team-card">
-                        <div class="team-card__image-wrapper"><div class="team-card__bg-circle"></div><img src="IMG/lyan.jpg" alt="Lyan"></div>
+                        <div class="team-card__image-wrapper"><img src="IMG/lyan.jpg" alt="Lyan"></div>
                         <h3>André Lyan</h3>
                         <p class="role">UX/UI Designer</p>
-                        <p class="bio">Defensor do usuário e qualidade visual.</p>
-                        <div class="social-links"><a href="#"><i class="fab fa-instagram"></i></a></div>
                     </div>
                     <div class="team-card">
-                        <div class="team-card__image-wrapper"><div class="team-card__bg-circle"></div><img src="IMG/lyan.jpg" alt="Lyan"></div>
+                        <div class="team-card__image-wrapper"><img src="IMG/lyan.jpg" alt="Lyan"></div>
                         <h3>André Lyan</h3>
                         <p class="role">UX/UI Designer</p>
-                        <p class="bio">Focado na máxima excelência da interface.</p>
-                        <div class="social-links"><a href="#"><i class="fab fa-instagram"></i></a></div>
                     </div>
                 </div>
-
             </div>
         </section>
     </main>
 
     <footer class="footer">
         <div class="footer-content">
-            <div class="footer-column">
-                <img src="IMG/Logo.png" alt="Logo" class="footer-logo">
-                <p>&copy; 2025 Ocean Coffee.</p>
-            </div>
-            <div class="footer-column">
-                <h4>Siga-nos</h4>
-                <div class="social-icons"><a href="#"><i class="fab fa-facebook-f"></i></a> <a href="#"><i class="fab fa-instagram"></i></a></div>
-            </div>
+            <p>&copy; 2025 Ocean Coffee.</p>
         </div>
     </footer>
 
@@ -315,10 +302,12 @@
             const menuToggle = document.getElementById('menu-toggle');
             const mobileNav = document.getElementById('mobile-nav');
             const navOverlay = document.getElementById('nav-overlay');
+
             menuToggle.addEventListener('click', () => {
                 mobileNav.classList.add('is-open');
                 navOverlay.classList.add('is-open');
             });
+
             navOverlay.addEventListener('click', () => {
                 mobileNav.classList.remove('is-open');
                 navOverlay.classList.remove('is-open');
