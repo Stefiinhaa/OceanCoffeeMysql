@@ -114,14 +114,14 @@
             margin: 0 auto 4rem auto;
         }
         .team-grid {
-        display: flex;       
-        flex-wrap: wrap;    
-        justify-content: center; 
-        gap: 2.5rem;
-        max-width: 1200px;
-        margin: 0 auto;
-    }
-            .team-card {
+            display: flex;            /* Altera para flex para permitir centralização dinâmica */
+            flex-wrap: wrap;          /* Mantém o comportamento de quebra de linha */
+            justify-content: center;  /* Centraliza os itens, afetando especialmente a última linha */
+            gap: 2.5rem;              /* Mantém o espaçamento original */
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .team-card {
             background-color: var(--color-surface);
             border-radius: 15px;
             box-shadow: var(--shadow-md);
