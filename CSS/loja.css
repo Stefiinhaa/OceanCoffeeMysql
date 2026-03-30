@@ -236,3 +236,19 @@ main { padding: 3rem 0; }
         grid-column: span 2 / span 2;
     }
 }
+
+.faixa-vendido {
+    position: absolute;
+    top: 20px;
+    right: -35px;
+    background-color: #e74c3c; /* Cor vermelha */
+    color: white;
+    padding: 5px 40px;
+    font-weight: bold;
+    font-size: 14px;
+    text-align: center;
+    transform: rotate(45deg);
+    z-index: 10;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    letter-spacing: 1px;
+}

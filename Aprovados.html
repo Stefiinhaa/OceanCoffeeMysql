@@ -215,10 +215,10 @@
         tr:hover td { background-color: #dbeaff; }
         /* Column Widths */
         th:nth-child(1), td:nth-child(1) { width: 5%; text-align: center;} /* # */
-        th:nth-child(2), td:nth-child(2) { width: 25%; } /* Usuário */
-        th:nth-child(3), td:nth-child(3) { width: 35%; } /* Produto */
+        th:nth-child(2), td:nth-child(2) { width: 20%; } /* Usuário */
+        th:nth-child(3), td:nth-child(3) { width: 30%; } /* Produto */
         th:nth-child(4), td:nth-child(4) { width: 15%; text-align: center;} /* Data */
-        th:nth-child(5), td:nth-child(5) { width: 20%; text-align: center; } /* Ações */
+        th:nth-child(5), td:nth-child(5) { width: 30%; text-align: center; } /* Ações */
         td:nth-child(5) { overflow: visible; } /* Allow button hover effect */
 
 
@@ -268,7 +268,7 @@
         .modal-info-item p { background-color: #f9f9f9; padding: 12px; border-radius: 5px; line-height: 1.6; color: #555; word-wrap: break-word; min-height: 44px; }
         
         /* ***** BOTÃO EXCLUIR RESTAURADO DENTRO DO MODAL ***** */
-        .modal-acoes { margin-top: auto; display: flex; justify-content: flex-end; gap: 15px; padding-top: 20px; border-top: 1px solid #eee; }
+        .modal-acoes { margin-top: auto; display: flex; justify-content: flex-end; align-items: center; gap: 15px; padding-top: 20px; border-top: 1px solid #eee; }
         .modal-acoes button { padding: 10px 25px; border: none; border-radius: 6px; color: white; cursor: pointer; font-size: 15px; font-weight: bold; transition: all 0.2s; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); }
         .modal-acoes button:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); }
         .modal-acoes .excluir { background-color: #dc3545; } 
@@ -322,6 +322,8 @@
              .modal-col-info { padding: 20px; }
              .modal-header h2 { font-size: 20px; }
              .modal-close-btn { font-size: 28px; }
+             .modal-acoes { flex-direction: column; align-items: stretch; }
+             .modal-acoes .btn-detalhes { margin-right: 0 !important; margin-bottom: 10px; width: 100%; }
         }
         /* --- MOBILE TABLE ADJUSTMENTS --- */
         @media (max-width: 768px) {
@@ -332,7 +334,7 @@
              th:nth-child(3), td:nth-child(3) { width: 35%; text-align: left;} /* Produto */
              th:nth-child(4), td:nth-child(4) { width: auto; text-align: center;} /* Data */
              th:nth-child(5), td:nth-child(5) { width: auto; min-width: 90px; text-align: center;} /* Ações */
-             .btn-detalhes { padding: 6px 10px; font-size: 13px; margin: 0 2px;}
+             .btn-detalhes { padding: 6px 10px; font-size: 13px; margin: 0 2px; margin-bottom: 4px; display: inline-block;}
              
              /* ***** MEDIA QUERY PARA O CONTAINER DE BUSCA (APROVADOS) ***** */
              .search-bar-container {
@@ -614,16 +616,21 @@
                 const dataString = produto.data_criacao || produto.data || new Date().toISOString();
                 const dataUTC = new Date(dataString.includes('Z') ? dataString : dataString + "Z");
                 
+                // NOVO: Botão de Marcar Vendido na tabela
                 tr.innerHTML = `
                     <td>${itemIndex}</td>
                     <td>${produto.nome_usuario || "Não Informado"}</td>
                     <td>${produto.titulo || "-"}</td>
                     <td>${dataUTC.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}</td>
                     <td>
-                        <button class="btn-detalhes">Ver</button>
+                        <button class="btn-detalhes btn-ver">Ver</button>
+                        <button class="btn-detalhes" style="background-color: ${produto.vendido == 1 ? '#ff9800' : '#28a745'}; margin-left: 5px;" 
+                                onclick="alternarStatusVendido(${produto.id}, ${produto.vendido || 0})">
+                            ${produto.vendido == 1 ? 'Desmarcar Vendido' : 'Marcar Vendido'}
+                        </button>
                     </td> `;
                  
-                 tr.querySelector('.btn-detalhes').addEventListener('click', () => abrirModalDetalhes(produto.id));
+                 tr.querySelector('.btn-ver').addEventListener('click', () => abrirModalDetalhes(produto.id));
                 tbodyEl.appendChild(tr);
             });
         }
@@ -702,8 +709,15 @@
                 carrosselContainer.innerHTML = `<div class="carrossel-sem-imagem">Sem Imagens</div>`;
             }
             
+            // NOVO: Adicionado botão Marcar/Desmarcar Vendido no Modal
             const acoesContainer = document.getElementById('modal-acoes');
-            acoesContainer.innerHTML = `<button class="excluir">Excluir Anúncio</button>`;
+            acoesContainer.innerHTML = `
+                <button class="btn-detalhes" style="background-color: ${produto.vendido == 1 ? '#ff9800' : '#28a745'}; margin-right: auto;" 
+                        onclick="alternarStatusVendido(${produto.id}, ${produto.vendido || 0})">
+                    ${produto.vendido == 1 ? 'Desmarcar Vendido' : 'Marcar Vendido'}
+                </button>
+                <button class="excluir">Excluir Anúncio</button>
+            `;
             acoesContainer.querySelector('.excluir').addEventListener('click', () => {
                 fecharModalDetalhes(); 
                 excluirAnuncio(produto.id, produto.titulo); 
@@ -764,6 +778,35 @@
                 }
              }
           };
+
+        // ======================================================================
+        // AÇÃO: MARCAR/DESMARCAR COMO VENDIDO
+        // ======================================================================
+        window.alternarStatusVendido = function(idAnuncio, statusAtual) {
+            const novoStatus = statusAtual == 1 ? 0 : 1; 
+            
+            fetch('admin_marcar_vendido.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ id: idAnuncio, vendido: novoStatus })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if(data.status) {
+                    showToast('Status de venda atualizado!');
+                    carregarAprovados(); // Recarrega a tabela automaticamente
+                    fecharModalDetalhes(); // Fecha o modal
+                } else {
+                    showToast('Erro ao atualizar: ' + data.mensagem, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                showToast('Erro de comunicação com o servidor.', 'error');
+            });
+        };
     
         // --- DOMContentLoaded ---
         document.addEventListener("DOMContentLoaded",()=>{

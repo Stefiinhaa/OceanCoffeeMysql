@@ -30,8 +30,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const imageUrl = product.imagem_0 ? product.imagem_0 : 'IMG/placeholder.png';
         const priceFormatted = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(product.preco);
 
+        // Lógica da faixa de vendido
+        const faixaVendido = product.vendido == 1 ? '<div class="faixa-vendido">VENDIDO</div>' : '';
+
+        // Note a adição da variável ${faixaVendido} dentro do container da imagem
         card.innerHTML = `
-            <a href="MarketPlace.html?id=${product.id}" class="oc-product-card__image-container" aria-label="Ver detalhes de ${product.titulo}">
+            <a href="MarketPlace.html?id=${product.id}" class="oc-product-card__image-container" aria-label="Ver detalhes de ${product.titulo}" style="position: relative; overflow: hidden;">
+                ${faixaVendido}
                 <img class="oc-product-card__image" src="${imageUrl}" alt="${product.titulo}" loading="lazy" decoding="async">
             </a>
             <div class="oc-product-card__content">
@@ -46,7 +51,6 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>`;
         return card;
     };
-
     const renderProducts = (products) => {
         if (!productGrid) return;
         productGrid.innerHTML = '';
