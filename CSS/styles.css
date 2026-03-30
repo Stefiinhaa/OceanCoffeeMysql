@@ -162,7 +162,33 @@ margin-left: 100px;
  
 }
 
+/* ========================================= */
+/* ETIQUETA DE "VENDIDO" MODERNA             */
+/* ========================================= */
 
+.tarja-vendido {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background-color: #EA580C; /* Laranja de destaque da Ocean Coffee */
+    color: #ffffff;
+    padding: 6px 14px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    font-family: 'Inter', 'Poppins', sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border-radius: 6px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    z-index: 20;
+    pointer-events: none;
+}
+
+/* Garante que a etiqueta fique colada no canto da foto e não fuja */
+.oc-product-card__image-container, .main-image {
+    position: relative !important;
+    display: block;
+}
 
 .services-section {
   padding: 40px;
