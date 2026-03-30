@@ -51,7 +51,30 @@ body {
     overflow: hidden;
     text-overflow: ellipsis;
 }
+/* Garante que a faixa não vaze para fora do card/imagem */
+.ad-card, .main-image {
+    position: relative !important;
+    overflow: hidden !important;
+}
 
+.tarja-vendido {
+    position: absolute;
+    top: 20px;
+    right: -35px;
+    background: linear-gradient(135deg, #F97316, #EA580C); /* Cores de destaque (Accent) da Ocean Coffee */
+    color: #FFFFFF;
+    padding: 6px 40px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    font-family: 'Poppins', sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    transform: rotate(45deg);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+    z-index: 10;
+    pointer-events: none; /* Garante que a faixa não atrapalhe o clique em outros elementos */
+    text-align: center;
+}
 
 /* === HEADER === */
 .oc-header { background-color: var(--color-surface); border-bottom: 1px solid var(--color-border); position: sticky; top: 0; height: 80px; z-index: 1000; }
@@ -184,3 +207,4 @@ body {
 .contact-button i { font-size: 1.5rem; }
 .contact-button span { font-size: 1rem; font-weight: 600; margin-top: 0; }
 .contact-button small { display: none; }
+

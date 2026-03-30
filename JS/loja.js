@@ -32,6 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         card.innerHTML = `
             <a href="MarketPlace.html?id=${product.id}" class="oc-product-card__image-container" aria-label="Ver detalhes de ${product.titulo}">
+                <div class="tarja-vendido">Vendido</div>
                 <img class="oc-product-card__image" src="${imageUrl}" alt="${product.titulo}" loading="lazy" decoding="async">
             </a>
             <div class="oc-product-card__content">

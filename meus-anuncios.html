@@ -60,7 +60,7 @@
         .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
         .page-header h1 { font-size: 2rem; font-weight: 700; margin: 0; }
         .ad-list { display: grid; grid-template-columns: 1fr; gap: 1rem; }
-        .ad-card { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: 12px; padding: 1rem; transition: box-shadow 0.2s ease, opacity 0.5s ease; overflow: hidden; }
+        .ad-card { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: 12px; padding: 1rem; transition: box-shadow 0.2s ease, opacity 0.5s ease; overflow: hidden; position: relative !important; }
         .ad-card:hover { box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05); }
         .ad-image { width: 80px; height: 80px; border-radius: 8px; object-fit: cover; flex-shrink: 0; }
         .ad-info { flex-grow: 1; min-width: 0; }
@@ -452,7 +452,7 @@
                         `;
 
                         adCard.innerHTML = `
-                            <img src="${imagemSrc}" class="ad-image">
+                            <div class="tarja-vendido">Vendido</div> <img src="${imagemSrc}" class="ad-image">
                             <div class="ad-info">
                                 <h3>${ad.titulo}</h3>
                                 <p class="ad-price">${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(ad.preco)}</p>
