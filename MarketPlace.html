@@ -130,18 +130,16 @@
               const nomeVendedor = product.nome_usuario || 'Vendedor Anônimo';
               const localVendedor = product.local || 'Localização não informada';
 
-              // --- LÓGICA DA FAIXA DE VENDIDO ---
-              const idUltimoVendido = 50; // ATENÇÃO: TROQUE 50 PELO NÚMERO DE ID DO SEU ÚLTIMO ANÚNCIO "VENDIDO"
-              let tarjaVendidoHTML = '';
-              if (parseInt(product.id) <= idUltimoVendido) {
-                  tarjaVendidoHTML = '<div class="tarja-vendido">Vendido</div>';
-              }
+              // --- LÓGICA INTELIGENTE DE "VENDIDO" ---
+              const isVendido = product.titulo.toUpperCase().includes('VENDIDO');
+              const tarjaVendidoHTML = isVendido ? '<div class="tarja-vendido">Vendido</div>' : '';
+              const tituloLimpo = product.titulo.replace(/vendido/ig, '').replace(/[\[\]\(\)-]/g, '').trim();
               
               productContent.innerHTML = `
                   <div class="product-gallery">
                       <div class="main-image">
                           ${tarjaVendidoHTML}
-                          <img src="${mainImage}" alt="Imagem principal de ${product.titulo}" id="mainProductImage">
+                          <img src="${mainImage}" alt="Imagem principal de ${tituloLimpo}" id="mainProductImage">
                       </div>
                       <div class="thumbnail-images">
                           ${thumbnails}
@@ -150,7 +148,7 @@
 
                   <div class="product-main-details">
                       <div class="product-info-card">
-                        <h1 class="product-title">${product.titulo}</h1>
+                        <h1 class="product-title">${tituloLimpo}</h1>
                         <p class="product-price">${priceFormatted}</p>
                         
                         <div class="product-section">
@@ -169,7 +167,7 @@
                           <i class="fas fa-map-marker-alt"></i>
                           <span>${localVendedor}</span>
                         </div>
-                        <a href="https://wa.me/55${contatoOriginal}?text=Olá, tenho interesse no seu anúncio: ${encodeURIComponent(product.titulo)}" class="contact-button" target="_blank">
+                        <a href="https://wa.me/55${contatoOriginal}?text=Olá, tenho interesse no seu anúncio: ${encodeURIComponent(tituloLimpo)}" class="contact-button" target="_blank">
                             <i class="fab fa-whatsapp"></i>
                             <span>Entrar em Contato via WhatsApp</span>
                         </a>
