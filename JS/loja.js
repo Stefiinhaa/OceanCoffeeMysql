@@ -23,27 +23,20 @@ document.addEventListener('DOMContentLoaded', () => {
             .replace(/[\u0300-\u036f]/g, ""); 
     };
 
-   const createProductCard = (product) => {
+    const createProductCard = (product) => {
         const card = document.createElement('div');
         card.className = 'oc-product-card';
         
         const imageUrl = product.imagem_0 ? product.imagem_0 : 'IMG/placeholder.png';
         const priceFormatted = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(product.preco);
 
-        // --- LÓGICA INTELIGENTE DE "VENDIDO" ---
-        // Se a palavra "vendido" estiver no título, ativa a faixa e limpa o texto
-        const isVendido = product.titulo.toUpperCase().includes('VENDIDO');
-        const tarjaVendidoHTML = isVendido ? '<div class="tarja-vendido">Vendido</div>' : '';
-        const tituloLimpo = product.titulo.replace(/vendido/ig, '').replace(/[\[\]\(\)-]/g, '').trim();
-
         card.innerHTML = `
-            <a href="MarketPlace.html?id=${product.id}" class="oc-product-card__image-container" aria-label="Ver detalhes de ${tituloLimpo}" style="position: relative; overflow: hidden; display: block;">
-                ${tarjaVendidoHTML}
-                <img class="oc-product-card__image" src="${imageUrl}" alt="${tituloLimpo}" loading="lazy" decoding="async">
+            <a href="MarketPlace.html?id=${product.id}" class="oc-product-card__image-container" aria-label="Ver detalhes de ${product.titulo}">
+                <img class="oc-product-card__image" src="${imageUrl}" alt="${product.titulo}" loading="lazy" decoding="async">
             </a>
             <div class="oc-product-card__content">
                 <h3 class="oc-product-card__title">
-                    <a href="MarketPlace.html?id=${product.id}" style="text-decoration: none; color: inherit;">${tituloLimpo}</a>
+                    <a href="MarketPlace.html?id=${product.id}" style="text-decoration: none; color: inherit;">${product.titulo}</a>
                 </h3>
                 <p class="oc-product-card__description">${product.descricao.substring(0, 100)}...</p>
                 <div class="oc-product-card__footer">
@@ -53,6 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>`;
         return card;
     };
+
     const renderProducts = (products) => {
         if (!productGrid) return;
         productGrid.innerHTML = '';
