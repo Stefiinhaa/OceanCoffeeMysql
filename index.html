@@ -26,6 +26,23 @@
       background-image: url("IMG/Fundo.png");
       background-size: cover;
     }
+    
+    /* CSS DA FAIXA DE VENDIDO */
+    .faixa-vendido {
+      position: absolute;
+      top: 15px;
+      right: -35px;
+      background-color: #e74c3c;
+      color: white;
+      padding: 5px 40px;
+      font-weight: bold;
+      font-size: 12px;
+      text-align: center;
+      transform: rotate(45deg);
+      z-index: 10;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+      letter-spacing: 1px;
+    }
   </style>
 </head>
 
@@ -442,9 +459,15 @@
 
                 produtosRecentes.forEach(product => {
                     const priceFormatted = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(product.preco);
+                    
+                    // Lógica da faixa de vendido para o Index
+                    const faixaVendido = product.vendido == 1 ? '<div class="faixa-vendido">VENDIDO</div>' : '';
+
+                    // Adicionado style="position: relative; overflow: hidden; display: block;" no link da imagem
                     const productCard = `
                         <article class="equipamentos-destaque-product-card">
-                            <a href="MarketPlace.html?id=${product.id}" class="equipamentos-destaque-product-card__image-container">
+                            <a href="MarketPlace.html?id=${product.id}" class="equipamentos-destaque-product-card__image-container" style="position: relative; overflow: hidden; display: block;">
+                                ${faixaVendido}
                                 <img src="${product.imagem_0 || 'IMG/placeholder.png'}" alt="${product.titulo}" class="equipamentos-destaque-product-card__image">
                             </a>
                             <div class="equipamentos-destaque-product-card__content">
@@ -462,10 +485,11 @@
                     gridProdutos.innerHTML += productCard;
                 });
             } else {
-                gridProdutos.innerHTML = "<p>Nenhum produto em destaque no momento.</p>";
+                gridProdutos.innerHTML = "<p style='text-align: center; width: 100%;'>Nenhum produto em destaque no momento.</p>";
             }
         } catch (error) {
-            gridProdutos.innerHTML = "<p>Erro ao carregar os produtos.</p>";
+            console.error("Erro ao carregar os produtos na página inicial:", error);
+            gridProdutos.innerHTML = "<p style='text-align: center; width: 100%; color: red;'>Ocorreu um erro ao comunicar com a base de dados.</p>";
         }
     });
   </script>
