@@ -441,7 +441,7 @@
         if (usuarioLogado) {
             const user = JSON.parse(usuarioLogado);
             loginLinks.forEach(link => {
-                link.textContent = user.tipo === "Administrador" ? "Painel" : "Meu Perfil";
+                link.textContent = user.tipo === "Administrador" ? "Login" : "Meu Perfil";
                 link.href = user.tipo === "Administrador" ? "dashboard.html" : "perfil.html";
             });
         }
