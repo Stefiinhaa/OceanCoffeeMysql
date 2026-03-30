@@ -30,12 +30,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const imageUrl = product.imagem_0 ? product.imagem_0 : 'IMG/placeholder.png';
         const priceFormatted = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(product.preco);
 
-        // Lógica da faixa de vendido
+        // Lógica da Faixa de Vendido
         const faixaVendido = product.vendido == 1 ? '<div class="faixa-vendido">VENDIDO</div>' : '';
 
-        // Note a adição da variável ${faixaVendido} dentro do container da imagem
         card.innerHTML = `
-            <a href="MarketPlace.html?id=${product.id}" class="oc-product-card__image-container" aria-label="Ver detalhes de ${product.titulo}" style="position: relative; overflow: hidden;">
+            <a href="MarketPlace.html?id=${product.id}" class="oc-product-card__image-container" aria-label="Ver detalhes de ${product.titulo}" style="position: relative; overflow: hidden; display: block;">
                 ${faixaVendido}
                 <img class="oc-product-card__image" src="${imageUrl}" alt="${product.titulo}" loading="lazy" decoding="async">
             </a>
@@ -51,6 +50,7 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>`;
         return card;
     };
+
     const renderProducts = (products) => {
         if (!productGrid) return;
         productGrid.innerHTML = '';
@@ -109,6 +109,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         try {
+            // Este PHP já puxa os mais recentes primeiro por conta do "ORDER BY id DESC"
             const response = await fetch('listar_anuncios.php');
             const data = await response.json();
 

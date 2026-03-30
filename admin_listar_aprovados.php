@@ -4,12 +4,12 @@ header("Content-Type: application/json; charset=UTF-8");
 
 include_once 'conexao.php';
 
-// Seleciona os anúncios aprovados e faz a ligação com a tabela de utilizadores para obter o nome
+// Seleciona os anúncios aprovados em ordem CRESCENTE (mais antigos primeiro ou ID menor para maior)
 $sql = "SELECT a.*, u.nome as nome_usuario 
         FROM anuncios a 
         LEFT JOIN usuarios u ON a.usuario_id = u.id 
         WHERE a.status_aprovacao = 'aprovado' 
-        ORDER BY a.id DESC";
+        ORDER BY a.id ASC";
 
 $resultado = $conexao->query($sql);
 $aprovados = array();
