@@ -155,23 +155,6 @@ main { padding: 3rem 0; }
     border-color: var(--color-hover-primary-light);
     color: var(--color-primary);
 }
-
-/* Estilo para a faixa de vendido */
-.faixa-vendido {
-    position: absolute;
-    top: 20px;
-    right: -35px;
-    background-color: #e74c3c; /* Vermelho chamativo */
-    color: white;
-    padding: 5px 40px;
-    transform: rotate(45deg); /* Gira a faixa na diagonal */
-    font-weight: bold;
-    font-size: 14px;
-    z-index: 10;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-    text-align: center;
-    pointer-events: none; /* Impede que a faixa bloqueie o clique na imagem */
-}
 .oc-filter-button.active {
     background-color: var(--color-primary); color: var(--color-white);
     border-color: var(--color-primary);

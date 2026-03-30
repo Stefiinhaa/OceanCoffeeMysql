@@ -30,13 +30,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const imageUrl = product.imagem_0 ? product.imagem_0 : 'IMG/placeholder.png';
         const priceFormatted = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(product.preco);
 
-        // LÓGICA DA FAIXA: Verifica se o produto está marcado como vendido no banco (1 ou "1")
-        const isVendido = (product.vendido == 1 || product.vendido === true || product.vendido === "1");
-        const faixaVendidoHTML = isVendido ? '<div class="faixa-vendido">VENDIDO</div>' : '';
-
         card.innerHTML = `
-            <a href="MarketPlace.html?id=${product.id}" class="oc-product-card__image-container" aria-label="Ver detalhes de ${product.titulo}" style="position: relative; display: block; overflow: hidden;">
-                ${faixaVendidoHTML} <img class="oc-product-card__image" src="${imageUrl}" alt="${product.titulo}" loading="lazy" decoding="async">
+            <a href="MarketPlace.html?id=${product.id}" class="oc-product-card__image-container" aria-label="Ver detalhes de ${product.titulo}">
+                <img class="oc-product-card__image" src="${imageUrl}" alt="${product.titulo}" loading="lazy" decoding="async">
             </a>
             <div class="oc-product-card__content">
                 <h3 class="oc-product-card__title">
@@ -50,7 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>`;
         return card;
     };
-    
+
     const renderProducts = (products) => {
         if (!productGrid) return;
         productGrid.innerHTML = '';

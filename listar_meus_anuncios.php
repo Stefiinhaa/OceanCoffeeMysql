@@ -24,26 +24,4 @@ if ($usuario_id > 0) {
 } else {
     echo json_encode(array("status" => false, "mensagem" => "ID de utilizador inválido."));
 }
-
-// Exemplo de função para chamar quando você clicar no botão "Informar Venda"
-async function informarVenda(idAnuncio) {
-    if(confirm("Tem certeza que deseja marcar este produto como VENDIDO?")) {
-        try {
-            const resposta = await fetch('marcar_vendido.php', {
-                method: 'POST',
-                body: JSON.stringify({ id: idAnuncio })
-            });
-            const dados = await resposta.json();
-            
-            if(dados.status) {
-                alert("Sucesso! A faixa de vendido agora aparecerá no site.");
-                location.reload(); // Recarrega para atualizar a tela
-            } else {
-                alert("Erro: " + dados.mensagem);
-            }
-        } catch (erro) {
-            console.error("Erro:", erro);
-        }
-    }
-}
 ?>
