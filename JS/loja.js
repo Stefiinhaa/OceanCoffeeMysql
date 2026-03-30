@@ -23,16 +23,27 @@ document.addEventListener('DOMContentLoaded', () => {
             .replace(/[\u0300-\u036f]/g, ""); 
     };
 
-    const createProductCard = (product) => {
+   const createProductCard = (product) => {
         const card = document.createElement('div');
         card.className = 'oc-product-card';
         
         const imageUrl = product.imagem_0 ? product.imagem_0 : 'IMG/placeholder.png';
         const priceFormatted = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(product.preco);
 
+        // --- LÓGICA DA FAIXA DE VENDIDO ---
+        // Coloque aqui o ID do seu anúncio mais recente que já está no banco.
+        // Exemplo: se você tem 50 produtos cadastrados, coloque 50. 
+        // Os próximos (51, 52...) NÃO terão a faixa.
+        const idUltimoVendido = 50; 
+        
+        let tarjaVendidoHTML = '';
+        if (parseInt(product.id) <= idUltimoVendido) {
+            tarjaVendidoHTML = '<div class="tarja-vendido">Vendido</div>';
+        }
+
         card.innerHTML = `
             <a href="MarketPlace.html?id=${product.id}" class="oc-product-card__image-container" aria-label="Ver detalhes de ${product.titulo}">
-                <div class="tarja-vendido">Vendido</div>
+                ${tarjaVendidoHTML}
                 <img class="oc-product-card__image" src="${imageUrl}" alt="${product.titulo}" loading="lazy" decoding="async">
             </a>
             <div class="oc-product-card__content">

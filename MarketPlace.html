@@ -130,10 +130,17 @@
               const nomeVendedor = product.nome_usuario || 'Vendedor Anônimo';
               const localVendedor = product.local || 'Localização não informada';
 
+              // --- LÓGICA DA FAIXA DE VENDIDO ---
+              const idUltimoVendido = 50; // ATENÇÃO: TROQUE 50 PELO NÚMERO DE ID DO SEU ÚLTIMO ANÚNCIO "VENDIDO"
+              let tarjaVendidoHTML = '';
+              if (parseInt(product.id) <= idUltimoVendido) {
+                  tarjaVendidoHTML = '<div class="tarja-vendido">Vendido</div>';
+              }
+              
               productContent.innerHTML = `
                   <div class="product-gallery">
                       <div class="main-image">
-                          <div class="tarja-vendido">Vendido</div> 
+                          ${tarjaVendidoHTML}
                           <img src="${mainImage}" alt="Imagem principal de ${product.titulo}" id="mainProductImage">
                       </div>
                       <div class="thumbnail-images">

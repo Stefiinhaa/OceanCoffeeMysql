@@ -451,8 +451,16 @@
                             </div>
                         `;
 
+                        // --- LÓGICA DA FAIXA DE VENDIDO ---
+                        const idUltimoVendido = 50; // ATENÇÃO: TROQUE 50 PELO NÚMERO DE ID DO SEU ÚLTIMO ANÚNCIO "VENDIDO"
+                        let tarjaVendidoHTML = '';
+                        if (parseInt(ad.id) <= idUltimoVendido && !ad.isOffline) {
+                            tarjaVendidoHTML = '<div class="tarja-vendido">Vendido</div>';
+                        }
+
                         adCard.innerHTML = `
-                            <div class="tarja-vendido">Vendido</div> <img src="${imagemSrc}" class="ad-image">
+                            ${tarjaVendidoHTML}
+                            <img src="${imagemSrc}" class="ad-image">
                             <div class="ad-info">
                                 <h3>${ad.titulo}</h3>
                                 <p class="ad-price">${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(ad.preco)}</p>
