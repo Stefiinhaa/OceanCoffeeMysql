@@ -450,7 +450,8 @@
         if (!gridProdutos) return;
 
         try {
-            const response = await fetch("listar_anuncios.php");
+            // No index.html, altere a linha do fetch para:
+            const response = await fetch("listar_anuncios.php?t=" + new Date().getTime());
             const data = await response.json();
 
             if (data.status === true && data.produtos.length > 0) {

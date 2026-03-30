@@ -110,7 +110,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             // Este PHP já puxa os mais recentes primeiro por conta do "ORDER BY id DESC"
-            const response = await fetch('listar_anuncios.php');
+         // No JS/loja.js, dentro da função init(), altere para:
+            const response = await fetch('listar_anuncios.php?t=' + Date.now());
             const data = await response.json();
 
             if (data.status === true) {
